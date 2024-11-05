@@ -47,30 +47,28 @@ cn_model, _ = load_from_name("ViT-B-16", device=device, download_root='./')
 cn_model.eval()
 
 class Ranks(object):
-	def __init__(self):
+	def __init__(self, datasetType = "msr"):
 		print(f'init Ranks ')
+		print("datasetType:", datasetType)
 		start_time = time.time()
 		self._now = None
 		self.q2i = OrderedDict()
-		# self.image_clip_feat = h5py.File('/home/zz/code/zz_code/demo/msr_part_clip_feat.hdf5')
-		# with h5py.File('/home/zz/code/zz_code/demo/msr_all_clip-B16_feat.hdf5') as f:
-		# with h5py.File('/home/zz/code/msr_all_clip_feat.hdf5') as f:
-		with h5py.File('/home/hl/code/demo/msr_all_clip_feat.hdf5', 'r') as f:
-			self.image_keys = list(f.keys())
-		print(f'Loaded image_keys: {time.time() - start_time} s')
-		# with h5py.File('/home/zz/code/zz_code/demo/msr_all_cnclip_feat.hdf5') as f:
-		with h5py.File('/home/hl/code/demo/msr_all_cnclip_feat.hdf5', 'r') as f:
-			self.cn_image_keys = list(f.keys())
-		print(f'Loaded cn_image_keys: {time.time() - start_time} s')
-		# with h5py.File('/home/zz/code/zz_code/demo/msr_all_clip-B16_feat_concat.h5') as f:
-		with h5py.File('/home/hl/code/demo/msr_all_clip_feat_concat.h5', 'r') as f:
-			self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
-		print(f'Loaded all_image_feat: {time.time() - start_time} s')
-		with h5py.File('/home/hl/code/demo/msr_all_cnclip_feat_concat.h5', 'r') as f:
-			self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
-		print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
-		print(f'all_image_feat:{self.all_image_feat.shape}')
-		# self.all_image_feat = self.all_image_feat / self.all_image_feat.norm(dim=1, keepdim=True)
+		if datasetType == "msr":
+			with h5py.File('/home/hl/code/demo/image_features/msr_all_clip_feat.hdf5', 'r') as f:
+				self.image_keys = list(f.keys())
+			print(f'Loaded image_keys: {time.time() - start_time} s')
+			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
+				self.cn_image_keys = list(f.keys())
+			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
+
+			with h5py.File('/home/hl/code/demo/image_features/msr_all_clip_feat_concat.h5', 'r') as f:
+				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
+			print(f'Loaded all_image_feat: {time.time() - start_time} s')
+			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
+				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
+			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
+			print(f'all_image_feat:{self.all_image_feat.shape}')
+
 		
 
 		
@@ -80,8 +78,8 @@ class Ranks(object):
 		ngpus = faiss.get_num_gpus()
 		print("number of GPUs:", ngpus)
 		# en
-		if os.path.exists("faissIndex/faissSearchEn.index"):
-			cpu_indexEn = faiss.read_index("faissIndex/faissSearchEn.index")
+		if os.path.exists(f"faissIndex/{datasetType}_faissSearchEn.index"):
+			cpu_indexEn = faiss.read_index(f"faissIndex/{datasetType}_faissSearchEn.index")
 			self.faissSearchEn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
 						cpu_indexEn
 					)
@@ -91,12 +89,12 @@ class Ranks(object):
 			cpu_indexEn
 		)
 			self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32)) # 添加所有的image features到索引中
-			faiss.write_index(faiss.index_gpu_to_cpu(self.faissSearchEn), "faissIndex/faissSearchEn.index")
+			faiss.write_index(faiss.index_gpu_to_cpu(self.faissSearchEn), f"faissIndex/{datasetType}_faissSearchEn.index")
 		print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')
 		
   		# cn
-		if os.path.exists("faissIndex/faissSearchCn.index"):
-			cpu_indexCn = faiss.read_index("faissIndex/faissSearchCn.index")
+		if os.path.exists(f"faissIndex/{datasetType}_faissSearchCn.index"):
+			cpu_indexCn = faiss.read_index(f"faissIndex/{datasetType}_faissSearchCn.index")
 			self.faissSearchCn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
 						cpu_indexCn
 					)
@@ -106,7 +104,7 @@ class Ranks(object):
 			cpu_indexCn
 		)	
 			self.faissSearchCn.add(self.cn_all_image_feat.cpu().numpy().astype(np.float32)) # 添加所有的cn_image features到索引中
-			faiss.write_index(faiss.index_gpu_to_cpu(self.faissSearchCn), "faissIndex/faissSearchCn.index")
+			faiss.write_index(faiss.index_gpu_to_cpu(self.faissSearchCn), f"faissIndex/{datasetType}_faissSearchCn.index")
 		print(f'Loaded faissSearchCn: {time.time() - faiss_start} s')
 		#####################使用faiss加速检索###############################
   
@@ -262,7 +260,7 @@ class Ranks(object):
 		return 1
 		# return len(self.ranks)
 
-ranks = Ranks()
+ranks = Ranks(datasetType="msr")
 # ranks.load_ranks(resp['cur_model'])
 
 
