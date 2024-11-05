@@ -1,0 +1,42 @@
+$def with (resp)
+$var cssfiles: /static/unlabeled.css
+
+
+<!-- 翻页 -->
+$def pagination(url, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?page=$1"><<</a>
+			$ last_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?page=$last_page"><</a>
+			$for i in resp['page']:
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?page=$next_page">></a>
+			<a href="$url?page=$total_pages">>></a>
+		</div>
+	</div>
+
+<!-- 随机搜寻 -->
+$def hangout(resp):
+	$:pagination("/unlabeled/", resp)
+	<div class='grid-container'>
+		$for vid in resp['ids']:
+			<div class='grid-item'>
+				$ path = '/static/videos/' + vid +'.mp4'
+				<video controls controlslist="nodownload" style="width: 100%;">
+					<source src="$path" type="video/mp4">
+					Your browser does not support HTML5 video.
+				</video>
+				<p style="text-align: center;">ID: $vid</p>
+			</div>
+	</div>
+	$:pagination("/unlabeled/", resp)
+
+
+$if resp:
+	$:hangout(resp)

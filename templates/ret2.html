@@ -1,0 +1,134 @@
+$def with (resp)
+$var cssfiles: /static/ret.css
+
+
+<!-- 翻页 -->
+$def pagination(url, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?page=$1">&lt;&lt;</a>
+			$ pre_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?page=$pre_page">&lt;</a>
+			$for i in resp['pages']:
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?page=$next_page">></a>
+			<a href="$url?page=$total_pages">>></a>
+		</div>
+	</div>
+
+
+<!-- 随机搜寻 -->
+$def hangout(resp):
+	<div class='statbox'>
+		<h3 style="text-align: center;">
+			top-inf mAP: $resp['map'], AP for each query (ascending order)
+		</h3>
+	</div>
+	<div class='grid-container'>
+		$for item in resp['random_queries']:
+			$ vid = item[0]
+			$ ap = item[1]
+			<div class='grid-item'>
+				$ path = '/static/fivr_videos/' + vid +'.mp4'
+				<video controls style="width: 100%;">
+					<source src="$path" type="video/mp4">
+					Your browser does not support HTML5 video.
+				</video>
+				<p style="text-align: center;">ID: $vid</p>
+				<p style="text-align: center;">AP: $ap</p>
+				<input type="submit" value="Search" onclick="setqid('$vid')">
+			</div>
+	</div>
+
+<!-- 检索结果 -->
+$def ret_result(resp):
+	<div class='statbox'>
+		<!-- <h3 style="text-align: center;">AP: $resp['ap']</h3> -->
+		<h3 style="text-align: center;">
+			ranking list
+		</h3>
+		
+	</div>
+	<!-- <div class="grid-container" style="overflow: hidden;"> -->
+	<div class="grid-container" style="overflow: hidden;">
+		$for item in resp['positive']:
+			$ pid = item['id']
+			$ rank = item['rank']
+			$ score = item['score']
+			$ index = item['index']
+			$ vid = 'video' + index + '.mp4'
+			<div class='grid-item' style="background-color: rgba(0, 255, 0, 0.1);">
+				$ path = '/static/msrvtt_videos/' + vid 
+				<video controls style="width: 100%; height: 224px; object-fit: cover;"> 
+					<source src="$path" type="video/mp4">
+					Your browser does not support HTML5 video.
+				</video>
+				<p style="text-align: center;">ID: $vid</p>
+				<p style="text-align: center;">Rank: $rank</p>
+				<!-- <p style="text-align: center;">Score: $score</p> -->
+			</div>
+	</div>
+	
+
+	<!-- <div class="grid-container" style="display: grid; grid-template-columns: repeat(5, 1fr); grid-gap: 10px; overflow: hidden;">
+   
+		<div class='grid-item' style="background-color: rgba(0, 255, 0, 0.1); padding: 10px;">
+			$ path = '/static/msrvtt_videos/video123.mp4'  # 视频文件路径
+			<video controls style="width: 100%; height: 85%; object-fit: cover;"> 
+				<source src="$path" type="video/mp4">
+				Your browser does not support HTML5 video.
+			</video>
+			<p style="text-align: center;">ID: video123</p>
+		</div>
+		
+	</div> -->
+	
+<!-- 搜索框 -->
+<div class='searchbox'>
+	
+	<form action="/ret/search/" method="post">
+		$if resp['status']:
+			$ text = resp['ret']['qid']
+			$ value = resp['ret']['qid']
+		$else:
+			$ text = "Enter a query..."
+			$ value = ""
+		<table align="center">
+			<tr>
+				<td>
+					<input id="qid" type="text" name="qid" placeholder="$text" value="$value" style="font-size: 1.2em; width: 300px;">
+				</td>
+				<td>
+					<input type="submit" value="Search" style="font-size: 1.2em; width: 200px;" onclick="return checkEmptyPost()">
+				</td>
+			</tr>
+		</table>
+		$if resp['status']:
+			
+			$:ret_result(resp['ret'])
+			$:pagination("/ret/search/", resp['page_info'])
+		
+	</form>
+</div>
+
+<script type="text/javascript">
+	function setqid(id){
+        e = document.getElementById("qid");
+        e.value = id;
+    }
+
+    function checkEmptyPost(){
+        var inputbox = document.getElementById("qid");
+        if(inputbox.value == ""){
+            alert("请输入查询ID，或点击示例查询下的搜索按钮。");
+            return false;
+        }
+        return true;
+    }
+</script>
+

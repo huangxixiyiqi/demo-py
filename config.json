@@ -1,0 +1,10 @@
+{
+    "query_video_path": "static/upload_videos",
+    "query_frames_path": "static/upload_video_frame/",
+    "frame_batch_size": 256,
+    "pretrained":"static/model/moco_v2_800ep_pretrain.pth.tar",
+    "cfg":"static/model/mocov2_dist.yaml",
+    "args":"static/model/args.yaml",
+    "candidate_feature":"/media/disk1/yjt/video_ret_demo/static/model/candidate_feature/videos50715_vlevel_feature.h5",
+    "max_hits": 10
+}
