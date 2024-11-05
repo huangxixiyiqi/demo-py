@@ -17,7 +17,7 @@ with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as jso
     id2image = json.load(json_file)
 
 images_path = '/media/disk2/hl/code/demo/static/ali_data'
-feature_file = h5py.File('./ali_all_clip-B32_feat_concate.hdf5', 'w')
+feature_file = h5py.File('./image_features/ali_all_clip-B32_feat_concate.hdf5', 'w')
 
 # 设置批量大小
 batch_size = 1024

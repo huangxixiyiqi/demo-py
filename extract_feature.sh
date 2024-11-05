@@ -1,0 +1,1 @@
+python extract_all_pic_CLIP_feat.py
