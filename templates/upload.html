@@ -1,0 +1,209 @@
+$def with (resp)
+$var cssfiles: /static/upload.css
+
+<!-- 翻页
+$def pagination_1(url, qid, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?video_id=$qid&page=$2"><<</a>
+			$ last_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?video_id=$qid&page=$last_page"><</a>
+			$for i in resp['pages']:
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?video_id=&qid?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?video_id=$qid&page=$next_page">></a>
+			<a href="$url?video_id=$qid&page=$total_pages">>></a>
+		</div>
+	</div> -->
+<!-- 翻页 -->
+$def pagination(url, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?page=$1"><<</a>
+			$ last_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?page=$last_page"><</a>
+			$for i in resp['pages']:
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?page=$next_page">></a>
+			<a href="$url?page=$total_pages">>></a>
+		</div>
+	</div>
+
+<!-- 翻页 -->
+$def random_pagination(url, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?page=$1"><<</a>
+			$ last_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?page=$last_page"><</a>
+			$for i in resp['pages']: 
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?page=$next_page">></a>
+			<a href="$url?page=$total_pages">>></a>
+		</div>
+	</div>
+
+<!-- 随机搜寻 -->
+$def hangout(resp):
+	
+	<div class='grid-container'>
+		$for vid in resp['random_queries']:
+			<div class='grid-item'>
+				$ path = '/static/videos/' + vid +'.mp4'
+				<video controls style="width: 100%;">
+					<source src="$path" type="video/mp4">
+					Your browser does not support HTML5 video.
+				</video>
+				<p style="text-align: center;">ID: $vid</p>
+			</div>
+	</div>
+
+<!-- 检索结果 -->
+$def ret_result(resp):
+	<div class="grid-container1">
+		$ path = '/static/upload_videos/' + resp['qid'] + '.mp4'
+		<div class='grid-item1'>
+			<video controls style="width: 90%;">
+				<source src="$path" type="video/mp4">
+				Your browser does not support HTML5 video.
+			</video>
+			<p style="text-align: center;">ID: $resp['qid']</p>
+		</div>
+	</div>
+	<div class='grid-container'>
+		$for item in resp['ranks']:
+			$ color = 'background-color: rgba(0, 255, 0, 0.1);'
+			<div class='grid-item' style="$color">
+				$ path = '/static/videos/' + item['id'] + '.mp4'
+				<video controls style="width: 100%;">
+					<source src="$path" type="video/mp4">
+					Your browser does not support HTML5 video.
+				</video>
+				<p style="text-align: center;">ID: $item['id']</p>
+				<p style="text-align: center;">Score: $item['score']</p>
+			</div>
+	</div>
+
+<!-- 搜索框
+<div class='searchbox'>
+
+	<form id="upload-form" action="/upload/search/" method="post" enctype="multipart/form-data" onsubmit="return checkForm();" class="video-upload">
+		<label label for="upload-btn">请选择视频文件：</label>
+		<input type="file" id="video" name="video" accept="video/*"><br><br>
+		<progress id="progress-bar" value="0" max="100"></progress>
+		<input type="submit" value="上传">
+	</form>
+
+</div> -->
+
+<!-- 文本框和按钮
+<div class='searchbox' style="text-align: center;">
+	<form id="search-form">
+		<label for="search-text">输出视频url：</label>
+		<input type="text" id="search-text" name="search-text">
+		<button type="button" id="search-btn">搜索</button>
+	</form>
+</div> -->
+
+
+<!-- <div class='searchbox'>
+	<form id="upload-form" action="/upload/search/" method="post" enctype="multipart/form-data" class="video-upload">
+		<label for="video">请选择视频文件：</label>
+		<input type="file" id="video" name="video" accept="video/*"><br><br>
+		<progress id="progress-bar" value="0" max="100"></progress>
+		<input type="submit" value="上传">
+	</form>
+</div> -->
+
+<!-- <div class='searchbox' style="text-align: center;">
+	<form id="search-form" action="/upload/download/" method="post">
+		<label for="search-text">输出视频URL：</label>
+		<input type="text" id="search-text" name="url">
+		<button type="submit" id="search-btn">搜索</button>
+	</form>
+</div> -->
+<!-- <div class='searchbox'>
+	<form id="upload-form" action="/upload/search/" method="post" enctype="multipart/form-data" class="image-upload">
+		<label for="image">请选择图片文件：</label>
+		<input type="file" id="image" name="image" accept="image/*"><br><br>
+		<input type="submit" value="上传">
+	</form>
+</div> -->
+<div class='searchbox'>
+	<form id="upload-form" action="/upload/search/" method="post" enctype="multipart/form-data" class="image-upload" style="display: flex; justify-content: center; align-items: center;">
+		
+		<input type="file" id="image" name="image" accept="image/*" style="padding: 10px; border: 1px solid #ccc; border-radius: 5px; background-color: #f5f5f5;">
+		<input type="submit" value="上传">
+	</form>
+</div>
+$if resp['status']:
+	<div>上传成功</div>
+	<a href="/ret">Retrieval</a>
+
+
+
+	
+<!-- <script>
+	function checkForm() {
+		// 检查视频文件是否已选择
+		var videoFile = document.getElementById("video").files[0];
+		if (!videoFile) {
+			alert("请选择视频文件！");
+			return false;
+		}
+		return true;
+	}
+</script> -->
+
+<script>
+	function checkForm() {
+		const form = document.getElementById('upload-form');
+		const progressBar = document.getElementById('progress-bar');
+		const videoFile = document.getElementById("video").files[0];
+		
+		// 检查视频文件是否已选择
+		if (!videoFile) {
+			alert("请选择视频文件！");
+			return false;
+		}
+		
+		// 创建 XMLHttpRequest 对象
+		const xhr = new XMLHttpRequest();
+		
+		// 监听 progress 事件，并更新进度条的值
+		xhr.upload.addEventListener('progress', (event) => {
+			const progress = (event.loaded / event.total) * 100;
+			progressBar.value = progress;
+		});
+		
+		// 当上传完成时，将进度条的值设置为 100
+		xhr.upload.addEventListener('load', () => {
+			progressBar.value = 100;
+		});
+		
+		// 将 FormData 对象作为参数，发送 POST 请求
+		xhr.open('POST', form.action);
+		xhr.send(new FormData(form));
+		
+		// 阻止表单被提交
+		return true;
+	}
+</script>
+
+
+
+

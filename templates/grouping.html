@@ -1,0 +1,65 @@
+$def with (models, resp)
+$var cssfiles: /static/grouping.css
+
+
+<!-- 翻页 -->
+$def pagination(url, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?page=$1"><<</a>
+			$ last_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?page=$last_page"><</a>
+			$for i in resp['page']:
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?page=$next_page">></a>
+			<a href="$url?page=$total_pages">>></a>
+		</div>
+	</div>
+
+<!-- 展示区 -->
+$def body(resp):
+	$:pagination("/grouping/", resp['page_info'])
+	$for group in resp['groups']:
+		<div class='grid-container'>
+			$for vid in group:
+				<div class='grid-item'>
+					$ path = '/static/videos/' + vid +'.mp4'
+					<video controls controlslist="nodownload" style="width: 100%;">
+						<source src="$path" type="video/mp4">
+						Your browser does not support HTML5 video.
+					</video>
+					<div><p style="text-align: center;">ID: $vid</p></div>
+				</div>
+		</div>
+	$:pagination("/grouping/", resp['page_info'])
+
+<!-- 搜索框 -->
+<div class='searchbox'>
+	<form id="changeModelForm" action="/grouping/" method="get">
+		<label for='model'>Select a model</label>
+		<select name='chosen_model' value="$models['cur_model']" onchange="changeModel()">
+			$for model in models['model_list']:
+				$if model == models['cur_model']:
+					<option selected="selected">$model</option>
+				$else:
+					<option>$model</option>
+		</select>
+	</form>
+	<form action="/grouping/search" method="post">
+		$if 'qid' in resp:
+			$ text = resp['qid']
+			$ value = resp['qid']
+		$else:
+			$ text = "Enter a video id..."
+			$ value = ""
+		<input type="text" name="qid" placeholder="$text" value="$value">
+		<input type="submit" value="Search">
+	</form>
+</div>
+$if resp:
+	$:body(resp)
