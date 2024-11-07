@@ -20,28 +20,33 @@ with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as jso
     id2image = json.load(json_file)
 
 images_path = '/media/disk2/hl/code/demo/static/ali_data'
-feature_file = h5py.File('./ali_all_cnclip-B16_feat_concate.hdf5', 'w')
+feature_file = h5py.File('./image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'w')
 
 # 设置批量大小
 batch_size = 1024
+image_batch = []
 image_ids = list(id2image.keys())
 num_images = len(image_ids)
 
-# 创建 HDF5 数据集时不预先分配大小
-feature_dataset = feature_file.create_dataset('all_clip_feat_concat', shape=(0, 512), maxshape=(None, 512), dtype=np.float32)
+# 预分配特征数组
+features = []
 
 for i in tqdm(range(0, num_images, batch_size), desc="抽取cnclip特征"):
-    batch_ids = image_ids[i:i + batch_size]
+    batch_ids = image_ids[i:i+batch_size]
     image_batch = [preprocess(Image.open(os.path.join(images_path, id2image[img_id]))).unsqueeze(0) for img_id in batch_ids]
     
-    # 合并批次
+    # 将单张图片的张量合并成一个批次
     image_batch = torch.cat(image_batch).to(device)
     
+    # 处理批次
     with torch.no_grad():
         batch_features = model.encode_image(image_batch).cpu().numpy()
-        
-        # 扩展数据集大小并保存当前批次特征
-        feature_dataset.resize(feature_dataset.shape[0] + batch_features.shape[0], axis=0)
-        feature_dataset[-batch_features.shape[0]:] = batch_features
+        features.append(batch_features)
 
+# 将所有特征拼接在一起
+features = np.concatenate(features, axis=0)
+
+# 保存特征到 HDF5 文件
+feature_file.create_dataset('all_clip_feat_concat', data=features)
 feature_file.close()
+
