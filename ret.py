@@ -13,7 +13,7 @@ render = web.template.render('templates/', base='index')
 import time
 import langid
 import faiss
-os.environ["CUDA_VISIBLE_DEVICES"] = "1,2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 urls = (
 	'/search/', 'search',
@@ -50,6 +50,7 @@ class Ranks(object):
 	def __init__(self, datasetType = "msr"):
 		print(f'init Ranks ')
 		print("datasetType:", datasetType)
+		self.datasetType = datasetType
 		start_time = time.time()
 		self._now = None
 		self.q2i = OrderedDict()
@@ -57,52 +58,90 @@ class Ranks(object):
 			with h5py.File('/home/hl/code/demo/image_features/msr_all_clip_feat.hdf5', 'r') as f:
 				self.image_keys = list(f.keys())
 			print(f'Loaded image_keys: {time.time() - start_time} s')
-			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
-				self.cn_image_keys = list(f.keys())
-			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
-
+			
 			with h5py.File('/home/hl/code/demo/image_features/msr_all_clip_feat_concat.h5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
+			
+			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
+				self.cn_image_keys = list(f.keys())
+			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
+   
 			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
+			
 			print(f'all_image_feat:{self.all_image_feat.shape}')
 
-		
+		if datasetType == "ali":
+     		# 读取 JSON 文件
+			with open('/home/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+				image_dicts = json.load(json_file)
+				self.image_keys = np.array(list(image_dicts.values()))
+    
+			print(f'Loaded image_keys: {time.time() - start_time} s')
+			
+			with h5py.File('/home/hl/code/demo/image_features/ali_all_clip-B32_feat_concate.hdf5', 'r') as f:
+				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
+			print(f'Loaded all_image_feat: {time.time() - start_time} s')
+			
 
-		
+			# 读取 JSON 文件
+			with open('/home/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+				image_dicts = json.load(json_file)
+				self.cn_image_keys = np.array(list(image_dicts.values()))
+    
+			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
+   
+			with h5py.File('/home/hl/code/demo/image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
+				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
+			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
+			
+   
+			print(f'all_image_feat:{self.all_image_feat.shape}')
+
+
 		#####################使用faiss加速检索###############################
 		faiss_start = time.time()
 		d = 512  # 向量维度
 		ngpus = faiss.get_num_gpus()
 		print("number of GPUs:", ngpus)
 		# en
+		res = faiss.StandardGpuResources()
+		gpu_id = 0  # 这里可以设置为你想要的 GPU ID，比如 0 或 1
+
+		# 设置配置，将索引放到指定 GPU 上
+		flat_config = faiss.GpuIndexFlatConfig()
+		flat_config.device = gpu_id  # 指定 GPU ID
 		if os.path.exists(f"faissIndex/{datasetType}_faissSearchEn.index"):
 			cpu_indexEn = faiss.read_index(f"faissIndex/{datasetType}_faissSearchEn.index")
-			self.faissSearchEn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
-						cpu_indexEn
-					)
+			# 将 CPU 索引转移至指定的 GPU 上
+			self.faissSearchEn = faiss.index_cpu_to_gpu(res, gpu_id, cpu_indexEn)
 		else:
 			cpu_indexEn = faiss.IndexFlatIP(d)  # 使用内积 建立索引
-			self.faissSearchEn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
-			cpu_indexEn
-		)
+			self.faissSearchEn = faiss.GpuIndexFlatIP(res, d, flat_config)
 			self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32)) # 添加所有的image features到索引中
 			faiss.write_index(faiss.index_gpu_to_cpu(self.faissSearchEn), f"faissIndex/{datasetType}_faissSearchEn.index")
 		print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')
 		
   		# cn
+    	# 初始化 GPU 资源并指定设备
+		res = faiss.StandardGpuResources()
+		if torch.cuda.device_count()>1:   # 使用ali_data 需要两张卡，一张卡20G，一张10G才能跑起来
+			print(f"可用 GPU 数量：{torch.cuda.device_count()}")
+			gpu_id = 1  # 这里可以设置为你想要的 GPU ID，比如 0 或 1
+		else:
+			gpu_id = 0
+		# 设置配置，将索引放到指定 GPU 上
+		flat_config = faiss.GpuIndexFlatConfig()
+		flat_config.device = gpu_id  # 指定 GPU ID
 		if os.path.exists(f"faissIndex/{datasetType}_faissSearchCn.index"):
 			cpu_indexCn = faiss.read_index(f"faissIndex/{datasetType}_faissSearchCn.index")
-			self.faissSearchCn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
-						cpu_indexCn
-					)
+			# 将 CPU 索引转移至指定的 GPU 上
+			self.faissSearchCn = faiss.index_cpu_to_gpu(res, gpu_id, cpu_indexCn)
 		else:
 			cpu_indexCn = faiss.IndexFlatIP(d)  # 使用内积， 建立索引
-			self.faissSearchCn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
-			cpu_indexCn
-		)	
+			self.faissSearchCn = faiss.GpuIndexFlatIP(res, d, flat_config)
 			self.faissSearchCn.add(self.cn_all_image_feat.cpu().numpy().astype(np.float32)) # 添加所有的cn_image features到索引中
 			faiss.write_index(faiss.index_gpu_to_cpu(self.faissSearchCn), f"faissIndex/{datasetType}_faissSearchCn.index")
 		print(f'Loaded faissSearchCn: {time.time() - faiss_start} s')
@@ -167,8 +206,12 @@ class Ranks(object):
 			# random_number = random.randint(1, 10000)
 			# if i < 10:
 			# 	random_number = cars[i] 
-			data.append({'id': self.image_keys[index], 'rank': i+1, 'score': probs[i], 'index': str(i)})
-
+			if self.datasetType == 'msr':
+				image_ids = 'msr_images/'+  self.image_keys[index]
+			if self.datasetType == 'ali':		
+				image_ids = 'ali_data/'+  self.image_keys[index]
+			data.append({'id': image_ids, 'rank': i+1, 'score': probs[i], 'index': str(i)})
+		
 		# 记录代码执行后的时间戳
 		end_time = time.time()
 		execution_time = end_time - start_time
@@ -218,7 +261,11 @@ class Ranks(object):
 		# print(topk_indices)
 		data = []
 		for i,index in enumerate(topk_indices):
-			data.append({'id':self.image_keys[index],'rank':i+1,'score':probs[index]})
+			if self.datasetType == 'msr':
+				image_ids = ['msr_images/'+ value  for value in self.image_keys[index]]
+			if self.datasetType == 'ali':		
+				image_ids = ['ali_data/'+ value  for value in self.image_keys[index]]
+			data.append({'id':image_ids,'rank':i+1,'score':probs[index]})
 		# 记录代码执行后的时间戳
 		end_time = time.time()
 
@@ -260,7 +307,7 @@ class Ranks(object):
 		return 1
 		# return len(self.ranks)
 
-ranks = Ranks(datasetType="msr")
+ranks = Ranks(datasetType="ali")
 # ranks.load_ranks(resp['cur_model'])
 
 
