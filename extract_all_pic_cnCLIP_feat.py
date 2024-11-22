@@ -13,14 +13,17 @@ print("Available models:", available_models())
 # 加载模型
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = load_from_name("ViT-B-16", device=device, download_root='./')
+state_dict = torch.load("/media/disk2/hl/code/demo/Chinese_CLIP/CNCLIP_ViT-B_16_finetuned.pt", map_location="cpu")
+load_info = model.load_state_dict(state_dict, strict=False)
+model.to(device)
 model.eval()
 
 # 读取 JSON 文件
-with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+with open('/media/disk2/hl/code/demo/static/JD_data/Index2Image.json', 'r') as json_file:
     id2image = json.load(json_file)
 
-images_path = '/media/disk2/hl/code/demo/static/ali_data'
-feature_file = h5py.File('./image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'w')
+images_path = '/media/disk2/hl/code/demo/static/JD_data/Images'
+feature_file = h5py.File('./image_features/jd_all_cnclip-B16_feat_concate.hdf5', 'w')
 
 # 设置批量大小
 batch_size = 1024

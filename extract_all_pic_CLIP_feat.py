@@ -11,13 +11,15 @@ print(clip.available_models())
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
-
+state_dict = torch.load("/home/zms/code/old/ali_race_codes/ali_race_clip/experiment/4000000_ali_race_data/CLIP freeze_layer_num_0/runs_0_400W/ViT-B_32_finetuned.pt", map_location="cpu")
+model.load_state_dict(state_dict)
+model.to(device)
 # 读取 JSON 文件
-with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+with open('/media/disk2/hl/code/demo/static/JD_data/Index2Image.json', 'r') as json_file:
     id2image = json.load(json_file)
 
-images_path = '/media/disk2/hl/code/demo/static/ali_data'
-feature_file = h5py.File('./image_features/ali_all_clip-B32_feat_concate.hdf5', 'w')
+images_path = '/media/disk2/hl/code/demo/static/JD_data/Images'
+feature_file = h5py.File('./image_features/jd_all_clip-B32_feat_concate.hdf5', 'w')
 
 # 设置批量大小
 batch_size = 1024

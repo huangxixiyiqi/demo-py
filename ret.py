@@ -13,7 +13,7 @@ render = web.template.render('templates/', base='index')
 import time
 import langid
 import faiss
-os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 urls = (
 	'/search/', 'search',
@@ -36,16 +36,23 @@ resp = {
 # resp['cur_model'] = resp['model_list'][0]
 store_r = None
 
-
+datasetType = "jd" # ali msr
 from CLIP.clip import clip
 import torch
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, preprocess = clip.load("ViT-B/32", device=device)
+if datasetType == 'jd':
+	state_dict = torch.load("/media/disk2/hl/code/demo/CLIP/ViT-B_32_finetuned.pt", map_location="cpu")
+	model.load_state_dict(state_dict)
+	model.to(device)
 import cn_clip.clip as cn_clip
 from cn_clip.clip import load_from_name
 cn_model, _ = load_from_name("ViT-B-16", device=device, download_root='./')
+if datasetType == 'jd':
+	state_dict = torch.load("/media/disk2/hl/code/demo/Chinese_CLIP/CNCLIP_ViT-B_16_finetuned.pt", map_location="cpu")
+	cn_model.load_state_dict(state_dict, strict=False)
+	cn_model.to(device)
 cn_model.eval()
-
 class Ranks(object):
 	def __init__(self, datasetType = "msr"):
 		print(f'init Ranks ')
@@ -54,52 +61,78 @@ class Ranks(object):
 		start_time = time.time()
 		self._now = None
 		self.q2i = OrderedDict()
-		if datasetType == "msr":
-			with h5py.File('/home/hl/code/demo/image_features/msr_all_clip_feat.hdf5', 'r') as f:
+		if self.datasetType == "msr":
+			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_clip_feat.hdf5', 'r') as f:
 				self.image_keys = list(f.keys())
 			print(f'Loaded image_keys: {time.time() - start_time} s')
 			
-			with h5py.File('/home/hl/code/demo/image_features/msr_all_clip_feat_concat.h5', 'r') as f:
+			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_clip_feat_concat.h5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
 			
-			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
+			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
 				self.cn_image_keys = list(f.keys())
 			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
    
-			with h5py.File('/home/hl/code/demo/image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
+			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
 			
 			print(f'all_image_feat:{self.all_image_feat.shape}')
 
-		if datasetType == "ali":
+		if self.datasetType == "ali":
      		# 读取 JSON 文件
-			with open('/home/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+			with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
 				image_dicts = json.load(json_file)
 				self.image_keys = np.array(list(image_dicts.values()))
     
 			print(f'Loaded image_keys: {time.time() - start_time} s')
 			
-			with h5py.File('/home/hl/code/demo/image_features/ali_all_clip-B32_feat_concate.hdf5', 'r') as f:
+			with h5py.File('/media/disk2/hl/code/demo/image_features/ali_all_clip-B32_feat_concate.hdf5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
 			
 
 			# 读取 JSON 文件
-			with open('/home/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+			with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
 				image_dicts = json.load(json_file)
 				self.cn_image_keys = np.array(list(image_dicts.values()))
     
 			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
    
-			with h5py.File('/home/hl/code/demo/image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
+			with h5py.File('/media/disk2/hl/code/demo/image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
 			
    
 			print(f'all_image_feat:{self.all_image_feat.shape}')
 
+		if self.datasetType == 'jd':
+			# 读取 JSON 文件
+			with open('/media/disk2/hl/code/demo/static/JD_data/Index2Image.json', 'r') as json_file:
+				image_dicts = json.load(json_file)
+				self.image_keys = np.array(list(image_dicts.values()))
+    
+			print(f'Loaded image_keys: {time.time() - start_time} s')
+			
+			with h5py.File('/media/disk2/hl/code/demo/image_features/jd_all_clip-B32_feat_concate.hdf5', 'r') as f:
+				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
+			print(f'Loaded all_image_feat: {time.time() - start_time} s')
+			
+
+			# 读取 JSON 文件
+			with open('/media/disk2/hl/code/demo/static/JD_data/Index2Image.json', 'r') as json_file:
+				image_dicts = json.load(json_file)
+				self.cn_image_keys = np.array(list(image_dicts.values()))
+    
+			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
+   
+			with h5py.File('/media/disk2/hl/code/demo/image_features/jd_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
+				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
+			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
+			
+   
+			print(f'all_image_feat:{self.all_image_feat.shape}')
 
 		#####################使用faiss加速检索###############################
 		faiss_start = time.time()
@@ -210,6 +243,8 @@ class Ranks(object):
 				image_ids = 'msr_images/'+  self.image_keys[index]
 			if self.datasetType == 'ali':		
 				image_ids = 'ali_data/'+  self.image_keys[index]
+			if self.datasetType == 'jd':		
+				image_ids = 'JD_data/Images/'+  self.image_keys[index]
 			data.append({'id': image_ids, 'rank': i+1, 'score': probs[i], 'index': str(i)})
 		
 		# 记录代码执行后的时间戳
@@ -265,6 +300,8 @@ class Ranks(object):
 				image_ids = ['msr_images/'+ value  for value in self.image_keys[index]]
 			if self.datasetType == 'ali':		
 				image_ids = ['ali_data/'+ value  for value in self.image_keys[index]]
+			if self.datasetType == 'jd':		
+				image_ids = 'JD_data/Images/'+  self.image_keys[index]
 			data.append({'id':image_ids,'rank':i+1,'score':probs[index]})
 		# 记录代码执行后的时间戳
 		end_time = time.time()
@@ -307,7 +344,7 @@ class Ranks(object):
 		return 1
 		# return len(self.ranks)
 
-ranks = Ranks(datasetType="ali")
+ranks = Ranks(datasetType=datasetType)
 # ranks.load_ranks(resp['cur_model'])
 
 
