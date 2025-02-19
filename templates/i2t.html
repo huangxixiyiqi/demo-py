@@ -1,0 +1,256 @@
+$def with (resp)
+$var cssfiles: /static/ret_.css
+
+
+<!-- 翻页 -->
+$def pagination(url, resp):
+	<div style="text-align: center; margin-top: 10px;">
+		<div class='pagination'>
+			<a href="$url?page=$1">&lt;&lt;</a>
+			$ pre_page = max(1, resp['cur_page'] - 1)
+			<a href="$url?page=$pre_page">&lt;</a>
+			$for i in resp['pages']:
+				$if i == resp['cur_page']:
+					<a class='active' href="javascript:void(0)">$i</a>
+				$else:
+					<a href="$url?page=$i">$i</a></a>
+			$ total_pages = resp['total_pages']
+			$ next_page = min(total_pages, resp['cur_page'] + 1)
+			<a href="$url?page=$next_page">></a>
+			<a href="$url?page=$total_pages">>></a>
+		</div>
+	</div>
+
+
+<!-- 随机搜寻 -->
+$def hangout(resp):
+	<div class='statbox'>
+		<h3 style="text-align: center;">
+			top-inf mAP: $resp['map'], AP for each query (ascending order)
+		</h3>
+	</div>
+	<div class='grid-container'>
+		$for item in resp['random_queries']:
+			$ vid = item[0]
+			$ ap = item[1]
+			<div class='grid-item'>
+				$ path = '/static/fivr_videos/' + vid +'.mp4'
+				<video controls style="width: 100%;">
+					<source src="$path" type="video/mp4">
+					Your browser does not support HTML5 video.
+				</video>
+				<p style="text-align: center;">ID: $vid</p>
+				<p style="text-align: center;">AP: $ap</p>
+				<input type="submit" value="Search" onclick="setqid('$vid')">
+			</div>
+	</div>
+
+<!-- 检索结果 -->
+$def ret_result(resp):
+    <div class='statbox'>
+        <h3 >
+            查询结果
+        </h3>
+    </div>
+    <div class="result-container" style="width: 100%; margin: 0 auto; font-family: Arial, sans-serif; font-size: 1.2em;">
+        <ul style="list-style-type: none; padding: 0; margin: 0;">
+            $for item in resp['positive']:
+                $ pid = item['id']
+				$ product = item['product']
+                $ rank = item['rank']
+                $ score = item['score']
+                <li style="padding: 10px; margin: 5px 0;  border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);"
+				data-product="$json.dumps(product)"
+				data-rank="$rank"
+				data-score="$score"
+				class="text_li"
+				>
+                    <p style="margin: 0; text-align: left;">
+                        <strong>文本:</strong> $pid<br>
+                        <strong>排名:</strong> $rank<br>
+                        <strong>得分:</strong> $score
+                    </p>
+                </li>
+        </ul>
+    </div>
+
+	<!-- 商品详细信息 -->
+	<div id="detailModal" class="modal">
+		<span class="close">&times;</span>
+		<div class="modal-content">
+			<h3>商品详细信息</h3>
+			<div style="padding: 10px;">
+				<p><strong>排名:</strong> <span id="modalProductRank"></span></p>
+				<p><strong>得分:</strong> <span id="modalProductScore"></span></p>
+				<p><strong>商品代码:</strong> <span id="product_code"></span></p>
+				<p><strong>商品地址:</strong> <span id="product_url"></span></p>
+				<p><strong>商品名称:</strong> <span id="product_name"></span></p>
+				<p><strong>商品价格:</strong> <span id="product_price"></span></p>
+				<!-- Product image Section -->
+				<p><strong>商品图片:</strong></p>
+				<ul id="product_images_list"></ul>
+				<!-- Product Intro Section -->
+				<p><strong>商品介绍:</strong></p>
+				<ul id="product_intro_list"></ul>
+				
+				<!-- Product Spec Section -->
+				<p><strong>商品详细信息:</strong></p>
+				<ul id="product_spec_list"></ul>
+				<p><strong>时间戳:</strong> <span id="timestamp"></span></p>
+				
+			</div>
+		</div>
+	</div>
+
+
+<!-- 图片上传框 -->
+<div class='searchbox'>
+    <form action="/i2t/searchi2t/" method="post" enctype="multipart/form-data">
+        <table align="center">
+            <tr>
+                <td>
+                    <!-- 图片上传控件 -->
+                    <input id="image" type="file" name="image" accept="image/jpeg, image/png" >
+                </td>
+                <td>
+                    <input type="submit" value="上传"  onclick="return checkEmptyPost()">
+                </td>
+            </tr>
+        </table>
+
+        <!-- 如果上传成功，显示结果 -->
+        $if resp['status']:
+            $if resp['image_path']:
+				$ path = resp['image_path']
+                <div style="text-align: center;">
+                    <h3>已上传图片:</h3>
+					<img src="$path" class="clickable-img" style="width: 224px; height: 224px;" alt="Uploaded Image failed">
+                </div>
+			$:ret_result(resp['ret'])
+			$:pagination("/i2t/searchi2t/", resp['page_info'])
+	</form>
+</div>
+<!-- 模态框 -->
+<div id="imgModal" class="modal_img">
+	<span class="close_img">&times;</span>
+	<img class="modal-content_img" id="modalImg">
+	<div id="caption" style="text-align: center;"></div>
+</div>
+
+
+<script type="text/javascript">
+	function setqid(id){
+        e = document.getElementById("image");
+        e.value = id;
+    }
+    function checkEmptyPost(){
+        var inputbox = document.getElementById("image");
+        if(inputbox.value == ""){
+            alert("请上传待查询图片。");
+            return false;
+        }
+        return true;
+    }
+	// 获取模态框
+	var modal = document.getElementById("imgModal");
+	var modalImg = document.getElementById("modalImg");
+	var captionText = document.getElementById("caption");
+
+	// 获取所有可点击图片
+	var images = document.querySelectorAll(".clickable-img");
+	images.forEach(function(img) {
+		img.addEventListener("click", function() {
+			modal.style.display = "block";
+			modalImg.src = this.src;
+			captionText.innerHTML = this.alt;
+		});
+	});
+
+	// 点击关闭按钮关闭模态框
+	var close = document.getElementsByClassName("close")[0];
+	close.onclick = function() {
+		modal.style.display = "none";
+	};
+	 // 点击 imgModal 空白区域关闭 imgModal
+	imgModal.onclick = function(event) {
+        if (event.target === imgModal) {
+            imgModal.style.display = "none";
+        }
+    };
+
+
+
+
+	// 商品详细信息展示
+	 // 获取模态框和关闭按钮
+	 const detailModal = document.getElementById("detailModal");
+    const closeBtn = detailModal.querySelector(".close");
+
+    // 关闭模态框
+    closeBtn.onclick = () => {
+        detailModal.style.display = "none";
+    };
+
+    // 点击空白处关闭模态框
+    window.onclick = (event) => {
+        if (event.target === detailModal) {
+            detailModal.style.display = "none";
+        }
+    };
+
+    // 为所有 grid-item 添加点击事件
+    document.querySelectorAll(".text_li").forEach((item) => {
+        item.addEventListener("click", function () {
+            // 从 data-* 属性中获取商品详细信息
+            const product_ = this.getAttribute("data-product");
+            const product = JSON.parse(product_);
+            const rank = this.getAttribute("data-rank");
+            const score = this.getAttribute("data-score");
+
+            // 填充模态框内容
+            document.getElementById("modalProductRank").innerText = rank;
+            document.getElementById("modalProductScore").innerText = score;
+            document.getElementById("product_code").innerText = product['product_code'];
+            document.getElementById("product_url").innerText = product['product_url'];
+            document.getElementById("product_name").innerText = product['product_name'];
+            // document.getElementById("product_images").innerText = product['product_images'];
+            document.getElementById("product_price").innerText = product['product_price'];
+            // document.getElementById("product_intro").innerText = product['product_intro'];
+            // document.getElementById("product_spec").innerText = product['product_spec'];
+            document.getElementById("timestamp").innerText = product['timestamp'];
+			
+			 // 动态填充 product_image
+			 const productImageList = document.getElementById("product_images_list");
+			 productImageList.innerHTML = ""; // 清空之前的内容
+			product['product_images'].forEach((introItem) => {
+				const li = document.createElement("li");
+				// li.innerText =  Object.keys(introItem)[1]+': \n'+introItem[Object.keys(introItem)[1]]; // 或者自定义格式展示
+				li.innerText =  introItem[Object.keys(introItem)[1]]; // 或者自定义格式展示
+				productImageList.appendChild(li);
+			});
+
+			
+			 // 动态填充 product_intro
+			const productIntroList = document.getElementById("product_intro_list");
+			productIntroList.innerHTML = ""; // 清空之前的内容
+			product['product_intro'].forEach((introItem) => {
+				const li = document.createElement("li");
+				li.innerText =  Object.keys(introItem)[0]+': '+introItem[Object.keys(introItem)[0]]; // 或者自定义格式展示
+				productIntroList.appendChild(li);
+			});
+
+			// 动态填充 product_spec
+			const productSpecList = document.getElementById("product_spec_list");
+			productSpecList.innerHTML = ""; // 清空之前的内容
+			product['product_spec'].forEach((specItem) => {
+				const li = document.createElement("li");
+				li.innerText = Object.keys(specItem)[0]+': '+specItem[Object.keys(specItem)[0]]; // 或者自定义格式展示
+				productSpecList.appendChild(li);
+			});
+
+            // 显示模态框
+            detailModal.style.display = "block";
+        });
+    });
+</script>
+

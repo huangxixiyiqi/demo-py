@@ -3,26 +3,23 @@ $def with (content)
 <!DOCTYPE html>
 <html>
 <head>
-	<title>NESA Ret System</title>
-	<link rel="stylesheet" href="/static/index.css" type="text/css" media="screen" charset="utf-8"/>
+	<title>图文检索系统</title>
+	<link rel="stylesheet" href="/static/index__.css" type="text/css" media="screen" charset="utf-8"/>
 	$if content and content.cssfiles:
 		$for f in content.cssfiles.split():
 			<link rel="stylesheet" href=$f type="text/css" media="screen" charset="utf-8"/>
 </head>
 <body>
 	<div class='header'>
-		<h1>Image Text Retrieval System</h1>
+		<h1>图文检索系统</h1>
 	</div>
 
 	<div class='topnav' id='top_nav'>
-		<!-- <form action="/ret" method="post">
-			<input type="submit" value="Retrieval">
-		  </form> -->
-		<a href="/ret">Text to Image Retrieval</a>
-		<a href="/grouping">Grouping</a>
-		<a href="/unlabeled">Unlabeled</a>
-		<a href="/upload">Upload</a>
-		<a href="/" style="float:right">Main Page</a>
+		<a href="/ret">图像检索</a>
+		<a href="/i2t">文本检索</a>
+		<!-- <a href="/i2i">Image to Image Retrieval</a>
+		<a href="/upload">Upload</a> -->
+		<a href="/" style="float:right">首页</a>
 	</div>
 
 	$if content is not None:

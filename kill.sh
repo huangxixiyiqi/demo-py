@@ -1,0 +1,1 @@
+ps aux | grep hl | grep server.py | awk '{print $2}' | xargs kill -9

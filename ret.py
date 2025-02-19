@@ -13,12 +13,14 @@ render = web.template.render('templates/', base='index')
 import time
 import langid
 import faiss
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+
+# os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 urls = (
 	'/search/', 'search',
+ 	'/search_data/', 'search_data',
 	'', 're_ret',
-	'/', 'ret'
+	'/', 'ret',
 )
 
 resp = {
@@ -36,23 +38,7 @@ resp = {
 # resp['cur_model'] = resp['model_list'][0]
 store_r = None
 
-datasetType = "jd" # ali msr
-from CLIP.clip import clip
-import torch
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, preprocess = clip.load("ViT-B/32", device=device)
-if datasetType == 'jd':
-	state_dict = torch.load("/media/disk2/hl/code/demo/CLIP/ViT-B_32_finetuned.pt", map_location="cpu")
-	model.load_state_dict(state_dict)
-	model.to(device)
-import cn_clip.clip as cn_clip
-from cn_clip.clip import load_from_name
-cn_model, _ = load_from_name("ViT-B-16", device=device, download_root='./')
-if datasetType == 'jd':
-	state_dict = torch.load("/media/disk2/hl/code/demo/Chinese_CLIP/CNCLIP_ViT-B_16_finetuned.pt", map_location="cpu")
-	cn_model.load_state_dict(state_dict, strict=False)
-	cn_model.to(device)
-cn_model.eval()
+from init_model import *
 class Ranks(object):
 	def __init__(self, datasetType = "msr"):
 		print(f'init Ranks ')
@@ -62,19 +48,19 @@ class Ranks(object):
 		self._now = None
 		self.q2i = OrderedDict()
 		if self.datasetType == "msr":
-			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_clip_feat.hdf5', 'r') as f:
+			with h5py.File('image_features/msr_all_clip_feat.hdf5', 'r') as f:
 				self.image_keys = list(f.keys())
 			print(f'Loaded image_keys: {time.time() - start_time} s')
 			
-			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_clip_feat_concat.h5', 'r') as f:
+			with h5py.File('image_features/msr_all_clip_feat_concat.h5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
 			
-			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
+			with h5py.File('image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
 				self.cn_image_keys = list(f.keys())
 			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
    
-			with h5py.File('/media/disk2/hl/code/demo/image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
+			with h5py.File('image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
 			
@@ -82,25 +68,25 @@ class Ranks(object):
 
 		if self.datasetType == "ali":
      		# 读取 JSON 文件
-			with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+			with open('static/ali_data/id2image.json', 'r') as json_file:
 				image_dicts = json.load(json_file)
 				self.image_keys = np.array(list(image_dicts.values()))
     
 			print(f'Loaded image_keys: {time.time() - start_time} s')
 			
-			with h5py.File('/media/disk2/hl/code/demo/image_features/ali_all_clip-B32_feat_concate.hdf5', 'r') as f:
+			with h5py.File('image_features/ali_all_clip-B32_feat_concate.hdf5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
 			
 
 			# 读取 JSON 文件
-			with open('/media/disk2/hl/code/demo/static/ali_data/id2image.json', 'r') as json_file:
+			with open('static/ali_data/id2image.json', 'r') as json_file:
 				image_dicts = json.load(json_file)
 				self.cn_image_keys = np.array(list(image_dicts.values()))
     
 			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
    
-			with h5py.File('/media/disk2/hl/code/demo/image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
+			with h5py.File('image_features/ali_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
 			
@@ -109,25 +95,25 @@ class Ranks(object):
 
 		if self.datasetType == 'jd':
 			# 读取 JSON 文件
-			with open('/media/disk2/hl/code/demo/static/JD_data/Index2Image.json', 'r') as json_file:
+			with open('static/JD_data/Index2Image.json', 'r') as json_file:
 				image_dicts = json.load(json_file)
 				self.image_keys = np.array(list(image_dicts.values()))
     
 			print(f'Loaded image_keys: {time.time() - start_time} s')
 			
-			with h5py.File('/media/disk2/hl/code/demo/image_features/jd_all_clip-B32_feat_concate.hdf5', 'r') as f:
+			with h5py.File('image_features/jd_all_clip-B32_feat_concate.hdf5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
 			
 
 			# 读取 JSON 文件
-			with open('/media/disk2/hl/code/demo/static/JD_data/Index2Image.json', 'r') as json_file:
+			with open('static/JD_data/Index2Image.json', 'r') as json_file:
 				image_dicts = json.load(json_file)
 				self.cn_image_keys = np.array(list(image_dicts.values()))
     
 			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
    
-			with h5py.File('/media/disk2/hl/code/demo/image_features/jd_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
+			with h5py.File('image_features/jd_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
 			
@@ -185,7 +171,7 @@ class Ranks(object):
 
 		# 计算代码执行所花费的时间
 		execution_time = end_time - start_time
-		print("初始化ranks代码执行时间: {:.2f} 秒".format(execution_time))
+		print("初始化ranks代码执行时间: {:.3f} 秒".format(execution_time))
 		
 		self.search_faiss('init search faiss')
 
@@ -209,17 +195,17 @@ class Ranks(object):
 		if  detected == 'en':
 			text = clip.tokenize([q]).to(device)
 			with torch.no_grad():
-				text_features = model.encode_text(text)
+				text_features = clip_model.encode_text(text)
 				# print(f'text_features{text_features.shape}')
 				text_features_np = text_features.cpu().numpy().astype(np.float32)
 
 				# 使用Faiss进行搜索
 				D, I = self.faissSearchEn.search(text_features_np, K)
 				probs = D[0]  
-		elif detected == 'zh':
+		else:
 			text = cn_clip.tokenize([q]).to(device)
 			with torch.no_grad():
-				text_features = cn_model.encode_text(text)
+				text_features = cnclip_model.encode_text(text)
 				# print(f'text_features{text_features.shape}')
 				text_features_np = text_features.cpu().numpy().astype(np.float32)
 
@@ -250,8 +236,7 @@ class Ranks(object):
 		# 记录代码执行后的时间戳
 		end_time = time.time()
 		execution_time = end_time - start_time
-		print("search_faiss 检索执行时间: {:.2f} 秒".format(execution_time))
-		self.search(q)
+		print("search_faiss 检索执行时间: {:.3f} 秒".format(execution_time))
 		return data
 
 	def search(self, q):
@@ -262,7 +247,7 @@ class Ranks(object):
 		if detected == 'en':
 			text = clip.tokenize([q]).to(device)
 			with torch.no_grad():
-				text_features = model.encode_text(text)
+				text_features = clip_model.encode_text(text)
 				# print(f'text_features{text_features.shape}')
 				# text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
@@ -274,10 +259,10 @@ class Ranks(object):
 				# logits_per_image = logit_scale * self.all_image_feat @ text_features.t()
 				probs = logits_per_image.detach().cpu().numpy()
 				probs = np.array([value[0] for value in probs])
-		elif detected == 'zh':
+		else:
 			text = cn_clip.tokenize([q]).to(device)
 			with torch.no_grad():
-				text_features = cn_model.encode_text(text)
+				text_features = cnclip_model.encode_text(text)
 				# print(f'text_features{text_features.shape}')
 				# text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
@@ -309,7 +294,7 @@ class Ranks(object):
 		# 计算代码执行所花费的时间
 		execution_time = end_time - start_time
 
-		print("search 检索执行时间: {:.2f} 秒".format(execution_time))
+		print("search 检索执行时间: {:.3f} 秒".format(execution_time))
 		return data
 		# return self.ranks[self.q2i[q]]
 
@@ -357,46 +342,10 @@ class ret:
 	def GET(self):
 		global resp, ranks
 		resp['status'] = 0
-		# input_data = web.input(page=None, chosen_model=None)
-		# if input_data.chosen_model is not None:
-		# 	resp['cur_model'] = input_data.chosen_model
-		# 	ranks.load_ranks(resp['cur_model'])
-
-		# resp['page_info']['total_pages'] = math.ceil(len(ranks)/self.samples_per_page)
-
-		# if input_data.page is not None:
-		# 	resp['page_info']['cur_page'] = int(input_data.page)
-		# else:
-		# 	resp['page_info']['cur_page'] = 1
-
-		# left = max(1, resp['page_info']['cur_page'] - 2)
-		# if left == 1:
-		# 	right = min(resp['page_info']['total_pages'], left + 4)
-		# else:
-		# 	right = min(resp['page_info']['total_pages'], resp['page_info']['cur_page'] + 2)
-		# 	if right == resp['page_info']['total_pages']:
-		# 		left = max(1, resp['page_info']['total_pages'] - 4)
-		# resp['page_info']['pages'] = list(range(left, right+1))
-
-		# s = (resp['page_info']['cur_page'] - 1) * self.samples_per_page
-		# e = s + self.samples_per_page
-		# random_ids = ranks.queries[s:e]
-		# aps = [f"{ranks.ap(q):.6f}" for q in random_ids]
-		# random_ids = ranks.queries[s:e]
-		# resp['hangout']['random_queries'] = list(zip(random_ids, aps))
-
-		# resp['hangout']['map'] = f"{ranks.map:.4f}"
-
-		# plt.figure(figsize=(12,3))
-		# x = list(range(len(ranks)))
-		# aps = ranks.aps
-		# plt.bar(x, aps)
-		# sio = BytesIO()
-		# plt.savefig(sio, format='png', bbox_inches='tight', pad_inches=0., transparent=True)
-		# data = base64.encodebytes(sio.getvalue()).decode()
-		# resp['hangout']['stat_img'] = 'data:image/png;base64,'+str(data)
+		
 
 		return render.ret(resp=resp)
+
 
 class search:
 	samples_per_page = 10
@@ -434,7 +383,7 @@ class search:
 
 	def POST(self):
 		print('post请求')
-
+		starttime = time.time()
 		global resp, ranks,store_r
 		resp['status'] = 1
 
@@ -460,68 +409,94 @@ class search:
 
 		resp['ret']['positive'] = r[s:e]
 		resp['ret']['ap'] = 0
-
-		
-
+		endtime = time.time()
+		# ranks.search(search_query)
+		print("post 请求响应时间为{:.3f} 秒".format(endtime-starttime))
 		return render.ret(resp=resp)
 
+
+
+class search_data:
+	samples_per_page = 10
+	
+	def GET(self):
+		web.header('Content-Type', 'application/json')
+		global resp, ranks
+		input_data = web.input(page=None)
+		
+		if not resp['status']:
+			return json.dumps({'error': 'Not initialized'})
+
+		if input_data.page:
+			resp['page_info']['cur_page'] = int(input_data.page)
+
+		s = (resp['page_info']['cur_page'] - 1) * self.samples_per_page
+		e = s + self.samples_per_page
+		
+		if store_r is None:
+			r = ranks.search(resp['ret']['qid'])
+		else:
+			r = store_r
+			
+		resp['ret']['positive'] = r[s:e]
+		
+		# 构建JSON响应
+		response_data = {
+			'status': resp['status'],
+			'data': resp['ret'],
+			'page_info': resp['page_info']
+		}
+		
+		return json.dumps(response_data)
+
+	def POST(self):
+		web.header('Content-Type', 'application/json')
+		starttime = time.time()
+		global resp, ranks, store_r
+		resp['status'] = 1
+
+		try:
+			post_data = web.input(qid=None,curpage=None)
+			if post_data.qid is None:
+				return json.dumps({'error': 'No query provided'})
+
+			search_query = post_data.qid
+			resp['ret']['qid'] = search_query
+			resp['page_info']['cur_page'] = post_data.curpage
+
+			r = ranks.search_faiss(search_query)
+			store_r = r
+			
+			total_pages = math.ceil(len(r)/self.samples_per_page)
+			resp['page_info']['total_pages'] = total_pages
+			resp['page_info']['pages'] = list(range(1, min(total_pages, 5) + 1))
+
+			s = (int(post_data.curpage)-1) * self.samples_per_page
+			e = s + self.samples_per_page
+			
+			# 构建JSON响应
+			response_data = {
+				'status': 'success',
+				'data': {
+					'results': r[s:e],
+					'total_pages': total_pages,
+					'current_page': post_data.curpage,
+					'query': search_query
+				}
+			}
+			
+			return json.dumps(response_data)
+			
+		except Exception as e:
+			return json.dumps({
+				'status': 'error',
+				'message': str(e)
+			})
+
+app = web.application(urls, globals())
 
 app = web.application(urls, globals())
 
 
 
 
-# IndexPQ
-		# 创建IndexPQ索引
-		# faiss_start = time.time()
-		# d = 512  # 向量维度
-		# ngpus = faiss.get_num_gpus()
-		# print("number of GPUs:", ngpus)
-		# self.faissSearchEn = faiss.IndexPQ(d, 8, 8)  # 8位量化
-
-		# # 训练索引（必要步骤，量化器需要先进行训练）
-		# self.faissSearchEn.train(self.all_image_feat.cpu().numpy().astype(np.float32))
-
-		# # 将数据添加到索引
-		# self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32))
-		# print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')
-  
-  
-		#  HNSW (Hierarchical Navigable Small World Graph)
-	# 	faiss_start = time.time()
-	# 	d = 512  # 向量维度
-	# 	ngpus = faiss.get_num_gpus()
-	# 	print("number of GPUs:", ngpus)
-	# 	self.faissSearchEn = faiss.IndexHNSWFlat(d, 32)  # 32 是图中邻居的数目
-	# 	self.faissSearchEn.metric_type = faiss.METRIC_INNER_PRODUCT
-	# # 	self.faissSearchEn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
-	# # 	index
-	# # )
-	# 	self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32)) # 添加所有的image features到索引中
-	# 	print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')
-		
-		
-		# IndexIVFFlat (Inverted File with Flat Quantization)
-		# faiss_start = time.time()
-		# d = 512  # 向量维度
-		# nlist = 100  # 聚类中心的数量，选择合适的值
-		# ngpus = faiss.get_num_gpus()
-		# print("number of GPUs:", ngpus)
-
-		# # Step 1: 创建用于聚类的量化器
-		# quantizer = faiss.IndexFlatIP(d)  # 使用内积计算作为聚类量化器
-
-		# # Step 2: 创建 IndexIVFFlat 索引 (使用内积)
-		# self.faissSearchEn = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT)
-
-		# # Step 3: 训练索引（在插入数据之前）
-		# # 注意: IndexIVFFlat 需要先训练
-		# self.faissSearchEn.train(self.all_image_feat.cpu().numpy().astype(np.float32))
-		# print("Training complete")
-
-		# # Step 4: 转移索引到 GPU 上
-		# # self.faissSearchEn = faiss.index_cpu_to_all_gpus(cpu_indexEn)  # build the index and transfer to GPU
-
-		# # Step 5: 添加数据到索引中
-		# self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32))  # 添加所有的image features到索引中
-		# print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')

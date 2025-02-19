@@ -1,23 +1,23 @@
 $def with (resp)
-$var cssfiles: /static/ret.css
+$var cssfiles: /static/ret_.css
 
 
 <!-- 翻页 -->
 $def pagination(url, resp):
-	<div style="text-align: center; margin-top: 10px;">
+	<div style="text-align: center; margin-top: 10px; background-color: #eef3f9;">
 		<div class='pagination'>
-			<a href="$url?page=$1">&lt;&lt;</a>
+			<a href="$url?page=$1" class="arrow">&lt;&lt;</a>
 			$ pre_page = max(1, resp['cur_page'] - 1)
-			<a href="$url?page=$pre_page">&lt;</a>
+			<a href="$url?page=$pre_page" class="arrow">&lt;</a>
 			$for i in resp['pages']:
 				$if i == resp['cur_page']:
 					<a class='active' href="javascript:void(0)">$i</a>
 				$else:
-					<a href="$url?page=$i">$i</a></a>
+					<a class = 'number' href="$url?page=$i">$i</a></a>
 			$ total_pages = resp['total_pages']
 			$ next_page = min(total_pages, resp['cur_page'] + 1)
-			<a href="$url?page=$next_page">></a>
-			<a href="$url?page=$total_pages">>></a>
+			<a href="$url?page=$next_page"  class="arrow">></a>
+			<a href="$url?page=$total_pages" class="arrow">>></a>
 		</div>
 	</div>
 
@@ -48,27 +48,63 @@ $def hangout(resp):
 <!-- 检索结果 -->
 $def ret_result(resp):
 	<div class='statbox'>
-		<h3 style="text-align: center;">
-			ranking list
+		<h3 >
+			查询结果
 		</h3>
 	</div>
-	<div class="grid-container" style="overflow: hidden;">
+	<div class='grid-container' style="overflow: hidden;">
 		$for item in resp['positive']:
 			$ pid = item['id']
+			$ product = item['product']
 			$ rank = item['rank']
 			$ score = item['score']
-			<div class='grid-item' style="background-color: rgba(0, 255, 0, 0.1);">
+			$ score_model = item['score_model']
+			$ score_ocr = item['score_ocr']
+			<div 
+				class='grid-item' 
+				data-product="$json.dumps(product)"
+				data-rank="$rank"
+				data-score="$score"
+			>
 				$ path = '/static/' + pid
 				<img src="$path" class="clickable-img" style="width: 224px; height: 224px;" alt="Image $pid">
-				<p style="text-align: center;">ID: $pid</p>
-				<p style="text-align: center;">Rank: $rank</p>
-				<p style="text-align: center;">Score: $score</p>
+				<p style="text-align: center;">商品名称: $product['product_name']</p>
+				<p style="text-align: center;">排名: $rank</p>
+				<p style="text-align: center;">得分: $score</p>
+				<!-- <p style="text-align: center;">得分_m: $score_model</p>
+				<p style="text-align: center;">得分_o: $score_ocr</p> -->
 			</div>
-	</div>
-	<!-- 模态框 -->
-	<div id="imgModal" class="modal">
+		</div>
+
+	<!-- 商品详细信息 -->
+	<div id="detailModal" class="modal">
 		<span class="close">&times;</span>
-		<img class="modal-content" id="modalImg">
+		<div class="modal-content">
+			<h3>商品详细信息</h3>
+			<div style="padding: 10px;">
+				<p><strong>排名:</strong> <span id="modalProductRank"></span></p>
+				<p><strong>得分:</strong> <span id="modalProductScore"></span></p>
+				<p><strong>商品代码:</strong> <span id="product_code"></span></p>
+				<p><strong>商品地址:</strong> <span id="product_url"></span></p>
+				<p><strong>商品名称:</strong> <span id="product_name"></span></p>
+				<p><strong>商品价格:</strong> <span id="product_price"></span></p>
+				<p><strong>商品图片:</strong> <span id="product_images"></span></p>
+				<!-- Product Intro Section -->
+				<p><strong>商品介绍:</strong></p>
+				<ul id="product_intro_list"></ul>
+				
+				<!-- Product Spec Section -->
+				<p><strong>商品详细信息:</strong></p>
+				<ul id="product_spec_list"></ul>
+				<p><strong>时间戳:</strong> <span id="timestamp"></span></p>
+				
+			</div>
+		</div>
+	</div>
+	<!-- 图片展示框 -->
+	<div id="imgModal" class="modal_img">
+		<span class="close_img">&times;</span>
+		<img class="modal-content_img" id="modalImg">
 		<div id="caption" style="text-align: center;"></div>
 	</div>
 
@@ -81,15 +117,15 @@ $def ret_result(resp):
 			$ text = resp['ret']['qid']
 			$ value = resp['ret']['qid']
 		$else:
-			$ text = "Enter a query..."
+			$ text = "输入查询..."
 			$ value = ""
 		<table align="center">
 			<tr>
 				<td>
-					<input id="qid" type="text" name="qid" placeholder="$text" value="$value" style="font-size: 1.2em; width: 300px;">
+					<input id="qid" type="text" name="qid" placeholder="$text" value="$value" >
 				</td>
 				<td>
-					<input type="submit" value="Search" style="font-size: 1.2em; width: 200px;" onclick="return checkEmptyPost()">
+					<input type="submit" value="搜索"  onclick="return checkEmptyPost()">
 				</td>
 			</tr>
 		</table>
@@ -110,69 +146,105 @@ $def ret_result(resp):
     function checkEmptyPost(){
         var inputbox = document.getElementById("qid");
         if(inputbox.value == ""){
-            alert("请输入查询ID，或点击示例查询下的搜索按钮。");
+            alert("请输入查询。");
             return false;
         }
         return true;
     }
-	// 获取模态框
+	// 获取图片框
 	var modal = document.getElementById("imgModal");
 	var modalImg = document.getElementById("modalImg");
 	var captionText = document.getElementById("caption");
+
+	
 
 	// 获取所有可点击图片
 	var images = document.querySelectorAll(".clickable-img");
 	images.forEach(function(img) {
 		img.addEventListener("click", function() {
+			event.stopPropagation();
 			modal.style.display = "block";
 			modalImg.src = this.src;
 			captionText.innerHTML = this.alt;
+			
 		});
 	});
-
+	
 	// 点击关闭按钮关闭模态框
-	var close = document.getElementsByClassName("close")[0];
+	var close = document.getElementsByClassName("close_img")[0];
 	close.onclick = function() {
 		modal.style.display = "none";
 	};
+
+	 // 点击 imgModal 空白区域关闭 imgModal
+	imgModal.onclick = function(event) {
+        if (event.target === imgModal) {
+            imgModal.style.display = "none";
+        }
+    };
+
+	// 商品详细信息展示
+	 // 获取模态框和关闭按钮
+	const detailModal = document.getElementById("detailModal");
+    const closeBtn = detailModal.querySelector(".close");
+
+    // 关闭模态框
+    closeBtn.onclick = () => {
+        detailModal.style.display = "none";
+    };
+
+    // 点击空白处关闭模态框
+    window.onclick = (event) => {
+        if (event.target === detailModal) {
+            detailModal.style.display = "none";
+        }
+    };
+
+    // 为所有 grid-item 添加点击事件
+    document.querySelectorAll(".grid-item").forEach((item) => {
+        item.addEventListener("click", function () {
+            // 从 data-* 属性中获取商品详细信息
+            const product_ = this.getAttribute("data-product");
+            const product = JSON.parse(product_);
+            const rank = this.getAttribute("data-rank");
+            const score = this.getAttribute("data-score");
+
+            // 填充模态框内容
+            document.getElementById("modalProductRank").innerText = rank;
+            document.getElementById("modalProductScore").innerText = score;
+            document.getElementById("product_code").innerText = product['product_code'];
+            document.getElementById("product_url").innerText = product['product_url'];
+            document.getElementById("product_name").innerText = product['product_name'];
+            document.getElementById("product_images").innerText = product['product_images'];
+            document.getElementById("product_price").innerText = product['product_price'];
+            // document.getElementById("product_intro").innerText = product['product_intro'];
+            // document.getElementById("product_spec").innerText = product['product_spec'];
+            document.getElementById("timestamp").innerText = product['timestamp'];
+       
+			
+			 // 动态填充 product_intro
+			const productIntroList = document.getElementById("product_intro_list");
+			productIntroList.innerHTML = ""; // 清空之前的内容
+			product['product_intro'].forEach((introItem) => {
+				const li = document.createElement("li");
+				li.innerText =  Object.keys(introItem)[0]+': '+introItem[Object.keys(introItem)[0]]; // 或者自定义格式展示
+				productIntroList.appendChild(li);
+			});
+
+			// 动态填充 product_spec
+			const productSpecList = document.getElementById("product_spec_list");
+			productSpecList.innerHTML = ""; // 清空之前的内容
+			product['product_spec'].forEach((specItem) => {
+				const li = document.createElement("li");
+				li.innerText = Object.keys(specItem)[0]+': '+specItem[Object.keys(specItem)[0]]; // 或者自定义格式展示
+				productSpecList.appendChild(li);
+			});
+
+            // 显示模态框
+            detailModal.style.display = "block";
+        });
+    });
+
+
 </script>
-<style>
-	/* 模态框样式 */
-	.modal {
-		display: none;
-		position: fixed;
-		z-index: 1000;
-		padding-top: 60px;
-		left: 0;
-		top: 0;
-		width: 100%;
-		height: 100%;
-		overflow: auto;
-		background-color: rgb(0, 0, 0);
-		background-color: rgba(0, 0, 0, 0.9);
-	}
 
-	.modal-content {
-		margin: auto;
-		display: block;
-		width: 80%;
-		max-width: 700px;
-	}
-
-	.close {
-		position: absolute;
-		top: 30px;
-		right: 35px;
-		color: #fff;
-		font-size: 40px;
-		font-weight: bold;
-		cursor: pointer;
-	}
-
-	.close:hover,
-	.close:focus {
-		color: #bbb;
-		text-decoration: none;
-		cursor: pointer;
-	}
-</style>
