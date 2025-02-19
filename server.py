@@ -1,17 +1,24 @@
+'''
+Author: huangxixi huangxixiyiqi@gmail.com
+Date: 2024-07-16 15:43:20
+LastEditors: huangxixi huangxixiyiqi@gmail.com
+LastEditTime: 2025-02-19 10:28:38
+FilePath: /demo/server.py
+Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+'''
 import web
-import ret
-# import grouping
-# import unlabeled
-# import upload
+import ret_whoosh as ret
+# import i2i
+import i2t
+
 
 render = web.template.render('templates/')
 
 
 urls = (
 	'/ret', ret.app,
-	# '/grouping', grouping.app,
-	# '/unlabeled', unlabeled.app,
-	# '/upload', upload.app,
+	# '/i2i', i2i.app,
+	'/i2t', i2t.app,
 	'/(.*)', 'index'
 )
 
@@ -21,6 +28,5 @@ class index:
 
 if __name__ == '__main__':
 	app = web.application(urls, globals())
-	
-	
+	# web.httpserver.runsimple(app.wsgifunc(), ("0.0.0.0", 8080))
 	app.run()

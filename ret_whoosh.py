@@ -9,18 +9,18 @@ from io import BytesIO
 from collections import OrderedDict
 import h5py
 import numpy as np
-render = web.template.render('templates/', base='index')
+from whoosh.qparser import QueryParser
+render = web.template.render('templates/', base='index',globals={'json': json})
 import time
 import langid
 import faiss
-
 # os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 urls = (
 	'/search/', 'search',
- 	'/search_data/', 'search_data',
+	'/search_data/', 'search_data',
 	'', 're_ret',
-	'/', 'ret',
+	'/', 'ret'
 )
 
 resp = {
@@ -32,10 +32,7 @@ resp = {
 	'page_info': dict()
 }
 
-# for file in os.listdir('static/ret'):
-#     if file.split('.')[1] == 'json':
-#         resp['model_list'].append(file.split('.')[0])
-# resp['cur_model'] = resp['model_list'][0]
+
 store_r = None
 
 from init_model import *
@@ -45,25 +42,35 @@ class Ranks(object):
 		print("datasetType:", datasetType)
 		self.datasetType = datasetType
 		start_time = time.time()
-		self._now = None
-		self.q2i = OrderedDict()
-		if self.datasetType == "msr":
-			with h5py.File('image_features/msr_all_clip_feat.hdf5', 'r') as f:
-				self.image_keys = list(f.keys())
+		self.jd_ix = open_dir("indexdir", indexname='jd_ocrtext_index')
+		self.ali_ix = open_dir("indexdir", indexname='ali_ocrtext_index')
+		execution_time = time.time()-start_time
+		print("初始化ranks代码执行时间: {:.3f} 秒".format(execution_time))
+		if self.datasetType == 'jd':
+			# 读取 JSON 文件
+			with open('static/JD_data/Index2Image.json', 'r') as json_file:
+				image_dicts = json.load(json_file)
+				self.image_keys = np.array(list(image_dicts.values()))
+    
 			print(f'Loaded image_keys: {time.time() - start_time} s')
 			
-			with h5py.File('image_features/msr_all_clip_feat_concat.h5', 'r') as f:
+			with h5py.File('image_features/jd_all_clip-B32_feat_concate.hdf5', 'r') as f:
 				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded all_image_feat: {time.time() - start_time} s')
 			
-			with h5py.File('image_features/msr_all_cnclip_feat.hdf5', 'r') as f:
-				self.cn_image_keys = list(f.keys())
+
+			# 读取 JSON 文件
+			with open('static/JD_data/Index2Image.json', 'r') as json_file:
+				image_dicts = json.load(json_file)
+				self.cn_image_keys = np.array(list(image_dicts.values()))
+    
 			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
    
-			with h5py.File('image_features/msr_all_cnclip_feat_concat.h5', 'r') as f:
+			with h5py.File('image_features/jd_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
 				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
 			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
 			
+   
 			print(f'all_image_feat:{self.all_image_feat.shape}')
 
 		if self.datasetType == "ali":
@@ -92,34 +99,7 @@ class Ranks(object):
 			
    
 			print(f'all_image_feat:{self.all_image_feat.shape}')
-
-		if self.datasetType == 'jd':
-			# 读取 JSON 文件
-			with open('static/JD_data/Index2Image.json', 'r') as json_file:
-				image_dicts = json.load(json_file)
-				self.image_keys = np.array(list(image_dicts.values()))
-    
-			print(f'Loaded image_keys: {time.time() - start_time} s')
-			
-			with h5py.File('image_features/jd_all_clip-B32_feat_concate.hdf5', 'r') as f:
-				self.all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
-			print(f'Loaded all_image_feat: {time.time() - start_time} s')
-			
-
-			# 读取 JSON 文件
-			with open('static/JD_data/Index2Image.json', 'r') as json_file:
-				image_dicts = json.load(json_file)
-				self.cn_image_keys = np.array(list(image_dicts.values()))
-    
-			print(f'Loaded cn_image_keys: {time.time() - start_time} s')
-   
-			with h5py.File('image_features/jd_all_cnclip-B16_feat_concate.hdf5', 'r') as f:
-				self.cn_all_image_feat = torch.from_numpy(f['all_clip_feat_concat'][:]).to(device)
-			print(f'Loaded cn_all_image_feat: {time.time() - start_time} s')
-			
-   
-			print(f'all_image_feat:{self.all_image_feat.shape}')
-
+  
 		#####################使用faiss加速检索###############################
 		faiss_start = time.time()
 		d = 512  # 向量维度
@@ -166,14 +146,8 @@ class Ranks(object):
 		print(f'Loaded faissSearchCn: {time.time() - faiss_start} s')
 		#####################使用faiss加速检索###############################
   
-  		# 记录代码执行后的时间戳
-		end_time = time.time()
-
-		# 计算代码执行所花费的时间
-		execution_time = end_time - start_time
-		print("初始化ranks代码执行时间: {:.3f} 秒".format(execution_time))
-		
-		self.search_faiss('init search faiss')
+  		
+		self.search_faiss('钙片')
 
 	def load_ranks(self, model):
 		if model == self._now:
@@ -192,6 +166,11 @@ class Ranks(object):
 		print(q)
 		detected = self.detect_language(q)
 		start_time = time.time()
+		# 构建返回数据
+		data = {}
+   
+		
+		# 模型匹配
 		if  detected == 'en':
 			text = clip.tokenize([q]).to(device)
 			with torch.no_grad():
@@ -215,88 +194,90 @@ class Ranks(object):
 
 		# 获取前 K 个最大值的索引（已经通过Faiss得出）
 		topk_indices = I[0].tolist()
-
-		# 构建返回数据
-		data = []
-		# cars = [3878 , 2515, 2987, 3910, 2628, 3034, 6443, 1890, 372, 873]
-		# cars = [6836 , 4539, 469, 6811, 6775, 6622, 1977, 446, 5579, 4207]
+		print("基于向量检索执行时间: {:.3f} 秒".format(time.time() - start_time))	
+		deep_min, deep_max = probs[len(topk_indices)-1], probs[0]
 		for i, index in enumerate(topk_indices):
-			# data.append({'id': self.image_keys[index], 'rank': i+1, 'score': probs[i]})
-			# random_number = random.randint(1, 10000)
-			# if i < 10:
-			# 	random_number = cars[i] 
-			if self.datasetType == 'msr':
-				image_ids = 'msr_images/'+  self.image_keys[index]
-			if self.datasetType == 'ali':		
-				image_ids = 'ali_data/'+  self.image_keys[index]
 			if self.datasetType == 'jd':		
 				image_ids = 'JD_data/Images/'+  self.image_keys[index]
-			data.append({'id': image_ids, 'rank': i+1, 'score': probs[i], 'index': str(i)})
-		
-		# 记录代码执行后的时间戳
+				if os.path.exists('./static/' +image_ids) == False:
+					continue
+				product = img2products[self.image_keys[index]]
+				deep_model_scores = probs[i]
+				data[image_ids] = {'id': image_ids,'product': product, 'rank': len(data)+1, 'score': (deep_model_scores - deep_min) / (deep_max - deep_min), 'index': str(len(data))}
+			elif self.datasetType == 'ali':
+				image_ids = 'ali_data/'+  self.image_keys[index]
+				if os.path.exists('./static/' +image_ids) == False:
+					continue
+				if self.datasetType == 'ali':
+					product = {"product_code": None,"product_url": None,"product_name": image_ids,"product_price": None,"product_images": [],"product_intro": [],"product_spec": [],"timestamp": None}
+				else: product = img2products[self.image_keys[index]]
+				deep_model_scores = probs[i]
+				data[image_ids] = {'id': image_ids,'product': product, 'rank': len(data)+1, 'score': (deep_model_scores - deep_min) / (deep_max - deep_min), 'index': str(len(data))}
+			else:
+				if self.datasetType == 'msr':
+					image_ids = 'msr_images/'+  self.image_keys[index]
+				data.append({'id': image_ids, 'rank': len(data)+1, 'score': probs[i], 'index': str(len(data))})
+			
+		ocrtime= time.time()
+		# 文本匹配
+		with self.jd_ix.searcher() as searcher:
+			query = QueryParser("content", self.jd_ix.schema).parse(q)
+			results = searcher.search(query)
+			if len(results) != 0:
+				whoosh_min, whoosh_max = results[-1].score, results[0].score
+			for i, index in enumerate(results):
+				if self.datasetType == 'jd':		
+					image_ids = 'JD_data/Images/'+  f"{index['vid']}.jpg"
+					if os.path.exists('./static/' +image_ids) == False:
+						continue
+					product = img2products[f"{index['vid']}.jpg"]
+					if len(results) ==1 :
+						whoosh_scores_norm = 1
+					else:
+						whoosh_scores_norm = (index.score - whoosh_min) / (whoosh_max - whoosh_min)
+					if image_ids not in data:
+						data[image_ids] = {'id': image_ids,'product': product, 'rank': i+1, 'score': whoosh_scores_norm, 'index': str(i)}
+					else:				
+						s_ocr = whoosh_scores_norm
+						s_ = data[image_ids]['score']
+						alpha = 0.5
+						data[image_ids]['score'] = s_ocr * alpha + (1-alpha) * s_
+				elif self.datasetType == 'ali':
+					image_ids = 'ali_data/'+  f"{index['vid']}.jpg"
+					if os.path.exists('./static/' +image_ids) == False:
+						continue
+					if self.datasetType == 'ali':
+						product = {"product_code": None,"product_url": None,"product_name": image_ids,"product_price": None,"product_images": [],"product_intro": [],"product_spec": [],"timestamp": None}
+					else: product = img2products[f"{index['vid']}.jpg"]
+				
+					if len(results) ==1 :
+						whoosh_scores_norm = 1
+					else:
+						whoosh_scores_norm = (index.score - whoosh_min) / (whoosh_max - whoosh_min)
+					if image_ids not in data:
+						data[image_ids] = {'id': image_ids,'product': product, 'rank': i+1, 'score': whoosh_scores_norm, 'index': str(i)}
+					else:				
+						s_ocr = whoosh_scores_norm
+						s_ = data[image_ids]['score']
+						alpha = 0.5
+						data[image_ids]['score'] = s_ocr * alpha + (1-alpha) * s_
+				else:
+					if self.datasetType == 'msr':
+						image_ids = 'msr_images/'+  self.image_keys[index]
+					data.append({'id': image_ids, 'rank': i+1, 'score': index.score, 'index': str(i)})
+		print("基于OCR检索执行时间: {:.3f} 秒".format(time.time() - ocrtime))		
+		sorted_data = sorted(list(data.values()), key=lambda x: x['score'], reverse=True)
+		# 更新 'rank' 和 'index'
+		for new_rank, item in enumerate(sorted_data, start=1):
+			item['rank'] = new_rank
+			item['index'] = str(new_rank - 1)
+  # 记录代码执行后的时间戳
 		end_time = time.time()
 		execution_time = end_time - start_time
 		print("search_faiss 检索执行时间: {:.3f} 秒".format(execution_time))
-		return data
+		return sorted_data
 
-	def search(self, q):
-		
-		print(q)
-		detected = self.detect_language(q)
-		start_time = time.time()
-		if detected == 'en':
-			text = clip.tokenize([q]).to(device)
-			with torch.no_grad():
-				text_features = clip_model.encode_text(text)
-				# print(f'text_features{text_features.shape}')
-				# text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-
-				# cosine similarity as logits
-				# logit_scale = model.logit_scale.exp()
-				logits_per_image = self.all_image_feat @ text_features.t()
-				# print(logits_per_image.shape)
-				# logits_per_image = logit_scale * self.all_image_feat @ text_features.t()
-				probs = logits_per_image.detach().cpu().numpy()
-				probs = np.array([value[0] for value in probs])
-		else:
-			text = cn_clip.tokenize([q]).to(device)
-			with torch.no_grad():
-				text_features = cnclip_model.encode_text(text)
-				# print(f'text_features{text_features.shape}')
-				# text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-
-				# cosine similarity as logits
-				# logit_scale = model.logit_scale.exp()
-				logits_per_image = self.cn_all_image_feat @ text_features.t()
-				# print(logits_per_image.shape)
-				# logits_per_image = logit_scale * self.all_image_feat @ text_features.t()
-				probs = logits_per_image.detach().cpu().numpy()
-				probs = np.array([value[0] for value in probs])
-		# 获取前 K 个最大值的索引
-		# print(probs.size)
-		K = 100
-		topk_indices = np.argsort(-probs)[:K].tolist()
-		# print(topk_indices)
-		data = []
-		for i,index in enumerate(topk_indices):
-			if self.datasetType == 'msr':
-				image_ids = ['msr_images/'+ value  for value in self.image_keys[index]]
-			if self.datasetType == 'ali':		
-				image_ids = ['ali_data/'+ value  for value in self.image_keys[index]]
-			if self.datasetType == 'jd':		
-				image_ids = 'JD_data/Images/'+  self.image_keys[index]
-			data.append({'id':image_ids,'rank':i+1,'score':probs[index]})
-		# 记录代码执行后的时间戳
-		end_time = time.time()
-
-		# 计算代码执行所花费的时间
-		execution_time = end_time - start_time
-
-		print("search 检索执行时间: {:.3f} 秒".format(execution_time))
-		return data
-		# return self.ranks[self.q2i[q]]
+	
 
 	def ap(self, q):
 		return self.ranks[self.q2i[q]]['ap']['top-inf']
@@ -342,10 +323,8 @@ class ret:
 	def GET(self):
 		global resp, ranks
 		resp['status'] = 0
-		
 
 		return render.ret(resp=resp)
-
 
 class search:
 	samples_per_page = 10
@@ -413,7 +392,6 @@ class search:
 		# ranks.search(search_query)
 		print("post 请求响应时间为{:.3f} 秒".format(endtime-starttime))
 		return render.ret(resp=resp)
-
 
 
 class search_data:
@@ -495,8 +473,60 @@ class search_data:
 
 app = web.application(urls, globals())
 
-app = web.application(urls, globals())
 
 
 
+# IndexPQ
+		# 创建IndexPQ索引
+		# faiss_start = time.time()
+		# d = 512  # 向量维度
+		# ngpus = faiss.get_num_gpus()
+		# print("number of GPUs:", ngpus)
+		# self.faissSearchEn = faiss.IndexPQ(d, 8, 8)  # 8位量化
 
+		# # 训练索引（必要步骤，量化器需要先进行训练）
+		# self.faissSearchEn.train(self.all_image_feat.cpu().numpy().astype(np.float32))
+
+		# # 将数据添加到索引
+		# self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32))
+		# print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')
+  
+  
+		#  HNSW (Hierarchical Navigable Small World Graph)
+	# 	faiss_start = time.time()
+	# 	d = 512  # 向量维度
+	# 	ngpus = faiss.get_num_gpus()
+	# 	print("number of GPUs:", ngpus)
+	# 	self.faissSearchEn = faiss.IndexHNSWFlat(d, 32)  # 32 是图中邻居的数目
+	# 	self.faissSearchEn.metric_type = faiss.METRIC_INNER_PRODUCT
+	# # 	self.faissSearchEn = faiss.index_cpu_to_all_gpus(  # build the index 转移至GPU
+	# # 	index
+	# # )
+	# 	self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32)) # 添加所有的image features到索引中
+	# 	print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')
+		
+		
+		# IndexIVFFlat (Inverted File with Flat Quantization)
+		# faiss_start = time.time()
+		# d = 512  # 向量维度
+		# nlist = 100  # 聚类中心的数量，选择合适的值
+		# ngpus = faiss.get_num_gpus()
+		# print("number of GPUs:", ngpus)
+
+		# # Step 1: 创建用于聚类的量化器
+		# quantizer = faiss.IndexFlatIP(d)  # 使用内积计算作为聚类量化器
+
+		# # Step 2: 创建 IndexIVFFlat 索引 (使用内积)
+		# self.faissSearchEn = faiss.IndexIVFFlat(quantizer, d, nlist, faiss.METRIC_INNER_PRODUCT)
+
+		# # Step 3: 训练索引（在插入数据之前）
+		# # 注意: IndexIVFFlat 需要先训练
+		# self.faissSearchEn.train(self.all_image_feat.cpu().numpy().astype(np.float32))
+		# print("Training complete")
+
+		# # Step 4: 转移索引到 GPU 上
+		# # self.faissSearchEn = faiss.index_cpu_to_all_gpus(cpu_indexEn)  # build the index and transfer to GPU
+
+		# # Step 5: 添加数据到索引中
+		# self.faissSearchEn.add(self.all_image_feat.cpu().numpy().astype(np.float32))  # 添加所有的image features到索引中
+		# print(f'Loaded faissSearchEn: {time.time() - faiss_start} s')

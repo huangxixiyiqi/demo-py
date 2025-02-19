@@ -1,0 +1,10 @@
+输入：待检索库数据路径 data_path，预训练视觉语言模型 model，待检索库预提取特征保存路径 output_path
+输出：待检索库样本特征 features
+
+datas = load_data(data_path)  // 加载待检索库数据
+features = [] // 待检索库样本特征数组
+for data in datas: //循环遍历所有样本
+    feature = model.encode(data) // 使用模型提取样本特征
+    featrues.append(feature) // 将该样本特征保存至数组
+
+save_data(features, output_path) // 保存特征至本地

@@ -5,6 +5,7 @@ import math
 import random
 import base64
 import matplotlib.pyplot as plt
+from PIL import Image
 from io import BytesIO
 from collections import OrderedDict
 import h5py
@@ -13,14 +14,12 @@ render = web.template.render('templates/', base='index')
 import time
 import langid
 import faiss
-
-# os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
 urls = (
-	'/search/', 'search',
- 	'/search_data/', 'search_data',
-	'', 're_ret',
-	'/', 'ret',
+	'/searchi2i/', 'searchi2i',
+	'', 're_i2i',
+	'/', 'i2i'
 )
 
 resp = {
@@ -32,14 +31,11 @@ resp = {
 	'page_info': dict()
 }
 
-# for file in os.listdir('static/ret'):
-#     if file.split('.')[1] == 'json':
-#         resp['model_list'].append(file.split('.')[0])
-# resp['cur_model'] = resp['model_list'][0]
+
 store_r = None
 
 from init_model import *
-class Ranks(object):
+class Ranksi2i(object):
 	def __init__(self, datasetType = "msr"):
 		print(f'init Ranks ')
 		print("datasetType:", datasetType)
@@ -172,46 +168,27 @@ class Ranks(object):
 		# 计算代码执行所花费的时间
 		execution_time = end_time - start_time
 		print("初始化ranks代码执行时间: {:.3f} 秒".format(execution_time))
-		
-		self.search_faiss('init search faiss')
+		img_test = Image.open('./static/uploaded.jpg')
+		self.search_faiss(img_test)
 
-	def load_ranks(self, model):
-		if model == self._now:
-			return
-		self._now = model
-		with open(os.path.join('static/ret', model+'.json'), 'r') as f:
-			self.ranks = json.load(f)
-		for i, r in enumerate(self.ranks):
-			self.q2i[r['qid']] = i
-
-		return
+	
 
 	def search_faiss(self, q):
 		
 		K = 100
-		print(q)
-		detected = self.detect_language(q)
+
 		start_time = time.time()
-		if  detected == 'en':
-			text = clip.tokenize([q]).to(device)
-			with torch.no_grad():
-				text_features = clip_model.encode_text(text)
-				# print(f'text_features{text_features.shape}')
-				text_features_np = text_features.cpu().numpy().astype(np.float32)
 
-				# 使用Faiss进行搜索
-				D, I = self.faissSearchEn.search(text_features_np, K)
-				probs = D[0]  
-		else:
-			text = cn_clip.tokenize([q]).to(device)
-			with torch.no_grad():
-				text_features = cnclip_model.encode_text(text)
-				# print(f'text_features{text_features.shape}')
-				text_features_np = text_features.cpu().numpy().astype(np.float32)
+		img_tensor = preprocess(q).unsqueeze(0).to(device)
+		with torch.no_grad():
+			img_features = clip_model.encode_image(img_tensor)
 
-				# 使用Faiss进行搜索
-				D, I = self.faissSearchCn.search(text_features_np, K)
-				probs = D[0]  
+			img_features_np = img_features.cpu().numpy().astype(np.float32)
+
+			# 使用Faiss进行搜索
+			D, I = self.faissSearchEn.search(img_features_np, K)
+			probs = D[0]  
+		
 
 		# 获取前 K 个最大值的索引（已经通过Faiss得出）
 		topk_indices = I[0].tolist()
@@ -242,38 +219,16 @@ class Ranks(object):
 	def search(self, q):
 		
 		print(q)
-		detected = self.detect_language(q)
+		
 		start_time = time.time()
-		if detected == 'en':
-			text = clip.tokenize([q]).to(device)
-			with torch.no_grad():
-				text_features = clip_model.encode_text(text)
-				# print(f'text_features{text_features.shape}')
-				# text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-
-				# cosine similarity as logits
-				# logit_scale = model.logit_scale.exp()
-				logits_per_image = self.all_image_feat @ text_features.t()
-				# print(logits_per_image.shape)
-				# logits_per_image = logit_scale * self.all_image_feat @ text_features.t()
-				probs = logits_per_image.detach().cpu().numpy()
-				probs = np.array([value[0] for value in probs])
-		else:
-			text = cn_clip.tokenize([q]).to(device)
-			with torch.no_grad():
-				text_features = cnclip_model.encode_text(text)
-				# print(f'text_features{text_features.shape}')
-				# text_features = text_features / text_features.norm(dim=1, keepdim=True)
-
-
-				# cosine similarity as logits
-				# logit_scale = model.logit_scale.exp()
-				logits_per_image = self.cn_all_image_feat @ text_features.t()
-				# print(logits_per_image.shape)
-				# logits_per_image = logit_scale * self.all_image_feat @ text_features.t()
-				probs = logits_per_image.detach().cpu().numpy()
-				probs = np.array([value[0] for value in probs])
+		
+		img_tensor = preprocess(q).unsqueeze(0).to(device)
+		with torch.no_grad():
+			img_features = clip_model.encode_image(img_tensor)
+			logits_per_image = self.all_image_feat @ img_features.t()
+			probs = logits_per_image.detach().cpu().numpy()
+			probs = np.array([value[0] for value in probs])
+		
 		# 获取前 K 个最大值的索引
 		# print(probs.size)
 		K = 100
@@ -329,25 +284,22 @@ class Ranks(object):
 		return 1
 		# return len(self.ranks)
 
-ranks = Ranks(datasetType=datasetType)
+ranks = Ranksi2i(datasetType=datasetType)
 # ranks.load_ranks(resp['cur_model'])
 
 
-class re_ret:
+class re_i2i:
 	def GET(self):
 		raise web.seeother('/')
 
-class ret:
+class i2i:
 	samples_per_page = 10
 	def GET(self):
 		global resp, ranks
 		resp['status'] = 0
-		
+		return render.i2i(resp=resp)
 
-		return render.ret(resp=resp)
-
-
-class search:
+class searchi2i:
 	samples_per_page = 10
 	def GET(self):
 		print('get请求')
@@ -379,7 +331,7 @@ class search:
 				left = max(1, total_pages - 4)
 		resp['page_info']['pages'] = list(range(left, right+1))
 
-		return render.ret(resp=resp)
+		return render.i2i(resp=resp)
 
 	def POST(self):
 		print('post请求')
@@ -387,17 +339,22 @@ class search:
 		global resp, ranks,store_r
 		resp['status'] = 1
 
-		post_data = web.input(qid=None)
-		if post_data.qid is None:
+		 # 获取上传的图片文件
+		post_data = web.input(image=None)
+
+		if post_data.image is None:
 			raise web.seeother('/')
 
-		search_query = post_data.qid
-		# print(search_query)
-		resp['ret']['qid'] = search_query
+		# 获取上传文件的内容
+		image_data = post_data.image
+		image = Image.open(BytesIO(image_data)).convert('RGB')
+		image.save('./static/uploaded.jpg')
+		resp['image_path'] = '/static/uploaded.jpg'
+		resp['ret']['qid'] = image
 		resp['page_info']['cur_page'] = 1
 
-		# r = ranks.search(search_query)
-		r = ranks.search_faiss(search_query)
+
+		r = ranks.search_faiss(image)
 		store_r = r
 		total_pages = math.ceil(len(r)/self.samples_per_page)
 		resp['page_info']['total_pages'] = total_pages
@@ -409,94 +366,14 @@ class search:
 
 		resp['ret']['positive'] = r[s:e]
 		resp['ret']['ap'] = 0
+
 		endtime = time.time()
-		# ranks.search(search_query)
+		# ranks.search(image)
 		print("post 请求响应时间为{:.3f} 秒".format(endtime-starttime))
-		return render.ret(resp=resp)
+		return render.i2i(resp=resp)
 
-
-
-class search_data:
-	samples_per_page = 10
-	
-	def GET(self):
-		web.header('Content-Type', 'application/json')
-		global resp, ranks
-		input_data = web.input(page=None)
-		
-		if not resp['status']:
-			return json.dumps({'error': 'Not initialized'})
-
-		if input_data.page:
-			resp['page_info']['cur_page'] = int(input_data.page)
-
-		s = (resp['page_info']['cur_page'] - 1) * self.samples_per_page
-		e = s + self.samples_per_page
-		
-		if store_r is None:
-			r = ranks.search(resp['ret']['qid'])
-		else:
-			r = store_r
-			
-		resp['ret']['positive'] = r[s:e]
-		
-		# 构建JSON响应
-		response_data = {
-			'status': resp['status'],
-			'data': resp['ret'],
-			'page_info': resp['page_info']
-		}
-		
-		return json.dumps(response_data)
-
-	def POST(self):
-		web.header('Content-Type', 'application/json')
-		starttime = time.time()
-		global resp, ranks, store_r
-		resp['status'] = 1
-
-		try:
-			post_data = web.input(qid=None,curpage=None)
-			if post_data.qid is None:
-				return json.dumps({'error': 'No query provided'})
-
-			search_query = post_data.qid
-			resp['ret']['qid'] = search_query
-			resp['page_info']['cur_page'] = post_data.curpage
-
-			r = ranks.search_faiss(search_query)
-			store_r = r
-			
-			total_pages = math.ceil(len(r)/self.samples_per_page)
-			resp['page_info']['total_pages'] = total_pages
-			resp['page_info']['pages'] = list(range(1, min(total_pages, 5) + 1))
-
-			s = (int(post_data.curpage)-1) * self.samples_per_page
-			e = s + self.samples_per_page
-			
-			# 构建JSON响应
-			response_data = {
-				'status': 'success',
-				'data': {
-					'results': r[s:e],
-					'total_pages': total_pages,
-					'current_page': post_data.curpage,
-					'query': search_query
-				}
-			}
-			
-			return json.dumps(response_data)
-			
-		except Exception as e:
-			return json.dumps({
-				'status': 'error',
-				'message': str(e)
-			})
 
 app = web.application(urls, globals())
-
-app = web.application(urls, globals())
-
 
 
 
