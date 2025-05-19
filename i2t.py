@@ -14,11 +14,23 @@ render = web.template.render('templates/', base='index',globals={'json': json})
 import time
 import langid
 import faiss
+import uuid
 # os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
 
+def convert_to_json_serializable(obj):
+    if isinstance(obj, np.float32):  # 转换 float32
+        return float(obj)
+    elif isinstance(obj, list):  # 处理列表
+        return [convert_to_json_serializable(item) for item in obj]
+    elif isinstance(obj, dict):  # 处理字典
+        return {key: convert_to_json_serializable(value) for key, value in obj.items()}
+    else:
+        return obj
+    
 urls = (
 	'/searchi2t/', 'searchi2t',
 	'/searchi2t_data/', 'searchi2t_data',
+	'/searchi2t_data_all/', 'searchi2t_data_all',
 	'', 're_i2t',
 	'/', 'i2t'
 )
@@ -29,12 +41,15 @@ resp = {
 	'ret': dict(),
 	'model_list': list(),
 	'cur_model': None,
-	'page_info': dict()
+	'page_info': dict(),
+
+	'ret_': dict(),
+	'page_info_': dict(),
 }
 
 
 store_r = None
-
+store_r1 = None
 from init_model import *
 class Ranksi2t(object):
 	def __init__(self, datasetType = "msr"):
@@ -106,6 +121,7 @@ class Ranksi2t(object):
 		img_test = Image.open('./static/uploaded.jpg')
 		self.search_faiss(img_test)
 
+		self.set_data()
 	
 
 	def search_faiss(self, q):
@@ -208,6 +224,40 @@ class Ranksi2t(object):
 	def __len__(self):
 		return 1
 		# return len(self.ranks)
+	
+	def set_data(self):
+		samples_per_page = 10
+		starttime  = time.time()
+		global resp, ranks,store_r1
+		# resp['status'] = 1
+
+		
+		
+		file_path = f'static/uploadedImage/0a9dc062-9c53-4ecc-ac35-9b4583ddc9ef.jpg'
+		
+		image  = Image.open(file_path).convert('RGB')
+		resp['image_path'] = f'/static/uploadedImage/0a9dc062-9c53-4ecc-ac35-9b4583ddc9ef.jpg'
+		resp['ret_']['qid'] = image
+		resp['page_info_']['cur_page'] = 1
+
+
+		r = self.search_faiss(image)
+		store_r1 = r
+		total_pages = math.ceil(len(r)/samples_per_page)
+		resp['page_info_']['total_pages'] = total_pages
+		resp['page_info_']['pages'] = list(range(resp['page_info_']['cur_page'], min(total_pages, resp['page_info_']['cur_page']+4)+1))
+
+		s = (resp['page_info_']['cur_page'] - 1) * samples_per_page
+		e = s + samples_per_page
+		resp['ret_']['ranks'] = r[s:e]
+
+		resp['ret_']['positive'] = r[s:e]
+		resp['ret_']['ap'] = 0
+
+		endtime = time.time()
+		# ranks.search(search_query)
+		print("i2t_setdata响应时间为{:.3f} 秒".format(endtime-starttime))
+		return render.i2t(resp=resp)
 
 ranks = Ranksi2t(datasetType=datasetType)
 # ranks.load_ranks(resp['cur_model'])
@@ -273,8 +323,11 @@ class searchi2t:
 		# 获取上传文件的内容
 		image_data = post_data.image
 		image = Image.open(BytesIO(image_data)).convert('RGB')
-		image.save('./static/uploaded.jpg')
-		resp['image_path'] = '/static/uploaded.jpg'
+		unique_id = str(uuid.uuid4())
+		file_path = f'static/uploadedImage/{unique_id}.jpg'
+		image.save(file_path)
+  
+		resp['image_path'] = f'/static/uploadedImage/{unique_id}.jpg'
 		resp['ret']['qid'] = image
 		resp['page_info']['cur_page'] = 1
 
@@ -379,6 +432,69 @@ class searchi2t_data:
                 'message': str(e)
             })
 
+
+
+class searchi2t_data_all:
+    def OPTIONS(self):
+		# 设置CORS响应头
+        web.header('Access-Control-Allow-Origin', '*')  # 允许所有来源
+        web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')  # 允许的 HTTP 方法
+        web.header('Access-Control-Allow-Headers', 'Content-Type')  # 允许的请求头
+        return ""  # 返回空字符串
+
+    def POST(self):
+        web.header('Content-Type', 'application/json; charset=utf-8')
+        web.header('Access-Control-Allow-Origin', '*')  # 允许所有来源
+        web.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')  # 允许的 HTTP 方法
+        web.header('Access-Control-Allow-Headers', 'Content-Type')  # 允许的请求头
+        starttime = time.time()
+        global resp, ranks, store_r
+        resp['status'] = 1
+
+        try:
+            post_data = web.input(image=None, image_url=None)
+            print(post_data)
+            if post_data.image is None and post_data.image_url is None:
+                return json.dumps({'error': 'No image uploaded'})
+            if post_data.image_url:
+				# 如果提供了图片路径，则打开该路径下的图片
+                image_path = post_data.image_url
+                if not os.path.exists(image_path):
+                    return json.dumps({'error': 'Image path does not exist'})
+                image = Image.open(image_path).convert('RGB')
+                file_path = image_path
+            else:
+                image_data = post_data.image
+                image = Image.open(BytesIO(image_data)).convert('RGB')
+                unique_id = str(uuid.uuid4())
+                file_path = f'static/uploadedImage/{unique_id}.jpg'
+                image.save(file_path)
+
+			
+            resp['image_path'] = file_path
+            resp['ret']['qid'] = image
+            
+
+            r = ranks.search_faiss(image)
+            store_r = r
+
+            
+            # 构建JSON响应
+            response_data = {
+                'status': 'success',
+                'data': {
+                    'results': convert_to_json_serializable(r),
+                    'uploaded_image': file_path
+                }
+            }
+
+            return json.dumps(response_data)
+
+        except Exception as e:
+            return json.dumps({
+                'status': 'error',
+                'message': str(e)
+            })
 
 app = web.application(urls, globals())
 

@@ -47,11 +47,11 @@ $def hangout(resp):
 
 <!-- 检索结果 -->
 $def ret_result(resp):
-    <div class='statbox'>
+    <!-- <div class='statbox'>
         <h3 >
             查询结果
         </h3>
-    </div>
+    </div> -->
     <div class="result-container" style="width: 100%; margin: 0 auto; font-family: Arial, sans-serif; font-size: 1.2em;">
         <ul style="list-style-type: none; padding: 0; margin: 0;">
             $for item in resp['positive']:
@@ -67,8 +67,10 @@ $def ret_result(resp):
 				>
                     <p style="margin: 0; text-align: left;">
                         <strong>文本:</strong> $pid<br>
-                        <strong>排名:</strong> $rank<br>
-                        <strong>得分:</strong> $score
+                        <!-- <strong>排名:</strong> $rank<br>
+                        <strong>得分:</strong> $score -->
+						<p ><strong>违法类型:</strong> $product['illegal_type']</p>
+						<p ><strong>违法依据:</strong> $product['illegal_basis']</p>
                     </p>
                 </li>
         </ul>
@@ -78,7 +80,12 @@ $def ret_result(resp):
 	<div id="detailModal" class="modal">
 		<span class="close">&times;</span>
 		<div class="modal-content">
-			<h3>商品详细信息</h3>
+			<h3>违法交易信息详情</h3>
+			<p><strong>违法类型:</strong> <span id="illegal_type"></span></p>
+			<p><strong>违法关键词:</strong> <span id="illegal_keywords"></span></p>
+			<p><strong>违法依据:</strong> <span id="illegal_basis"></span></p>
+			<p><strong>违法说明:</strong> <span id="illegal_description"></span></p>
+			
 			<div style="padding: 10px;">
 				<p><strong>排名:</strong> <span id="modalProductRank"></span></p>
 				<p><strong>得分:</strong> <span id="modalProductScore"></span></p>
@@ -109,7 +116,7 @@ $def ret_result(resp):
         <table align="center">
             <tr>
                 <td>
-                    <!-- 图片上传控件 -->
+                   
                     <input id="image" type="file" name="image" accept="image/jpeg, image/png" >
                 </td>
                 <td>
@@ -119,7 +126,12 @@ $def ret_result(resp):
         </table>
 
         <!-- 如果上传成功，显示结果 -->
-        $if resp['status']:
+        
+		
+	
+			
+	</form>
+	$if resp['status']:
             $if resp['image_path']:
 				$ path = resp['image_path']
                 <div style="text-align: center;">
@@ -128,7 +140,8 @@ $def ret_result(resp):
                 </div>
 			$:ret_result(resp['ret'])
 			$:pagination("/i2t/searchi2t/", resp['page_info'])
-	</form>
+	$else:
+		$:ret_result(resp['ret_'])
 </div>
 <!-- 模态框 -->
 <div id="imgModal" class="modal_img">
@@ -208,6 +221,11 @@ $def ret_result(resp):
             const score = this.getAttribute("data-score");
 
             // 填充模态框内容
+			document.getElementById("illegal_type").innerText = product['illegal_type'];
+            document.getElementById("illegal_basis").innerText = product['illegal_basis'];
+            document.getElementById("illegal_description").innerText = product['illegal_description'];
+			document.getElementById("illegal_keywords").innerText = product['illegal_keywords'];
+
             document.getElementById("modalProductRank").innerText = rank;
             document.getElementById("modalProductScore").innerText = score;
             document.getElementById("product_code").innerText = product['product_code'];
@@ -220,15 +238,41 @@ $def ret_result(resp):
             document.getElementById("timestamp").innerText = product['timestamp'];
 			
 			 // 动态填充 product_image
-			 const productImageList = document.getElementById("product_images_list");
-			 productImageList.innerHTML = ""; // 清空之前的内容
+			// const productImageList = document.getElementById("product_images_list");
+			// productImageList.innerHTML = ""; // 清空之前的内容
+			// product['product_images'].forEach((introItem) => {
+			// 	const li = document.createElement("li");
+			// 	// li.innerText =  Object.keys(introItem)[1]+': \n'+introItem[Object.keys(introItem)[1]]; // 或者自定义格式展示
+			// 	li.innerText =  introItem[Object.keys(introItem)[1]]; // 或者自定义格式展示
+			// 	productImageList.appendChild(li);
+			// });
+
+
+			// 动态填充商品图片
+			const productImageList = document.getElementById("product_images_list");
+			productImageList.innerHTML = ""; // 清空之前的内容
+
+			// 假设 product['product_images'] 是一个数组，每个元素是一个对象，包含图片链接
 			product['product_images'].forEach((introItem) => {
+				const imgLink = introItem[Object.keys(introItem)[1]]; // 获取图片链接
+
+				// 创建图片元素
+				const img = document.createElement("img");
+				img.src = imgLink; // 设置图片链接
+				img.style.width = "100px"; // 设置图片宽度
+				img.style.cursor = "pointer"; // 鼠标悬停时显示为手型
+				img.title = "点击查看大图"; // 提示文字
+
+				// 点击图片跳转到链接
+				img.addEventListener("click", () => {
+					window.open(imgLink, "_blank"); // 在新窗口打开链接
+				});
+
+				// 将图片添加到列表项中
 				const li = document.createElement("li");
-				// li.innerText =  Object.keys(introItem)[1]+': \n'+introItem[Object.keys(introItem)[1]]; // 或者自定义格式展示
-				li.innerText =  introItem[Object.keys(introItem)[1]]; // 或者自定义格式展示
+				li.appendChild(img);
 				productImageList.appendChild(li);
 			});
-
 			
 			 // 动态填充 product_intro
 			const productIntroList = document.getElementById("product_intro_list");

@@ -4,26 +4,27 @@ $def with (content)
 <html>
 <head>
 	<title>图文检索系统</title>
-	<link rel="stylesheet" href="/static/index__.css" type="text/css" media="screen" charset="utf-8"/>
+	<link rel="stylesheet" href="/static/index___.css" type="text/css" media="screen" charset="utf-8"/>
 	$if content and content.cssfiles:
 		$for f in content.cssfiles.split():
 			<link rel="stylesheet" href=$f type="text/css" media="screen" charset="utf-8"/>
 </head>
 <body>
-	<div class='header'>
+	<!-- <div class='header'>
 		<h1>图文检索系统</h1>
-	</div>
+	</div> -->
 
 	<div class='topnav' id='top_nav'>
 		<a href="/ret">图像检索</a>
 		<a href="/i2t">文本检索</a>
 		<!-- <a href="/i2i">Image to Image Retrieval</a>
 		<a href="/upload">Upload</a> -->
-		<a href="/" style="float:right">首页</a>
+		<!-- <a href="/" style="float:right">首页</a> -->
 	</div>
 
 	$if content is not None:
 		$:content
+	
 
 	<script type="text/javascript" src="/static/index.js"></script>
 </body>

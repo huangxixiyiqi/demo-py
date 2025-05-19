@@ -231,7 +231,12 @@ class Ranks(object):
 				image_ids = 'ali_data/'+  self.image_keys[index]
 			if self.datasetType == 'jd':		
 				image_ids = 'JD_data/Images/'+  self.image_keys[index]
-			data.append({'id': image_ids, 'rank': i+1, 'score': probs[i], 'index': str(i)})
+			data.append({
+			'id': image_ids,
+			'rank': i + 1,
+			'score': float(probs[i]),  # 将 float32 转换为 float
+			'index': str(i)
+		})
 		
 		# 记录代码执行后的时间戳
 		end_time = time.time()

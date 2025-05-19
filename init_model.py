@@ -25,7 +25,9 @@ if datasetType == 'jd':
 	cnclip_model.to(device)
 cnclip_model.eval()
 if datasetType == 'jd':
-	with open('static/JD_data/img2product.json', 'r') as json_file:
+
+	with open('static/JD_data/img2product_illegal.json', 'r') as json_file:
 					img2products = json.load(json_file)
-	with open('static/JD_data/products.json', 'r') as json_file:
+	file_path ='static/JD_data/products_illegal.json'
+	with open(file_path, 'r') as json_file:
 					products = json.load(json_file)				

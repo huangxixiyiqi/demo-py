@@ -26,6 +26,8 @@ class index:
 	def GET(self, name):
 		return render.index(content=None)
 
+
+
 if __name__ == '__main__':
 	app = web.application(urls, globals())
 	web.httpserver.runsimple(app.wsgifunc(), ("0.0.0.0", 8080))

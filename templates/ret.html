@@ -1,5 +1,5 @@
 $def with (resp)
-$var cssfiles: /static/ret_.css
+$var cssfiles: /static/ret__.css
 
 
 <!-- 翻页 -->
@@ -47,11 +47,12 @@ $def hangout(resp):
 
 <!-- 检索结果 -->
 $def ret_result(resp):
-	<div class='statbox'>
+	
+	<!-- <div class='statbox'>
 		<h3 >
 			查询结果
 		</h3>
-	</div>
+	</div> -->
 	<div class='grid-container' style="overflow: hidden;">
 		$for item in resp['positive']:
 			$ pid = item['id']
@@ -69,8 +70,10 @@ $def ret_result(resp):
 				$ path = '/static/' + pid
 				<img src="$path" class="clickable-img" style="width: 224px; height: 224px;" alt="Image $pid">
 				<p style="text-align: center;">商品名称: $product['product_name']</p>
-				<p style="text-align: center;">排名: $rank</p>
-				<p style="text-align: center;">得分: $score</p>
+				<!-- <p style="text-align: center;">排名: $rank</p>
+				<p style="text-align: center;">得分: $score</p> -->
+				<p style="text-align: center;">违法类型: $product['illegal_type']</p>
+				<p style="text-align: center;">违法依据: $product['illegal_basis']</p>
 				<!-- <p style="text-align: center;">得分_m: $score_model</p>
 				<p style="text-align: center;">得分_o: $score_ocr</p> -->
 			</div>
@@ -80,15 +83,24 @@ $def ret_result(resp):
 	<div id="detailModal" class="modal">
 		<span class="close">&times;</span>
 		<div class="modal-content">
-			<h3>商品详细信息</h3>
+			<h3>违法交易信息详情</h3>
+			<p><strong>违法类型:</strong> <span id="illegal_type"></span></p>
+			<p><strong>违法关键词:</strong> <span id="illegal_keywords"></span></p>
+			<p><strong>违法依据:</strong> <span id="illegal_basis"></span></p>
+			<p><strong>违法说明:</strong> <span id="illegal_description"></span></p>
 			<div style="padding: 10px;">
+				
+
 				<p><strong>排名:</strong> <span id="modalProductRank"></span></p>
 				<p><strong>得分:</strong> <span id="modalProductScore"></span></p>
 				<p><strong>商品代码:</strong> <span id="product_code"></span></p>
 				<p><strong>商品地址:</strong> <span id="product_url"></span></p>
 				<p><strong>商品名称:</strong> <span id="product_name"></span></p>
 				<p><strong>商品价格:</strong> <span id="product_price"></span></p>
-				<p><strong>商品图片:</strong> <span id="product_images"></span></p>
+				<!-- <p><strong>商品图片:</strong> <span id="product_images"></span></p> -->
+				<p><strong>商品图片:</strong></p>
+            	<div id="product_images_container" style="text-align: center;"></div>
+       
 				<!-- Product Intro Section -->
 				<p><strong>商品介绍:</strong></p>
 				<ul id="product_intro_list"></ul>
@@ -130,10 +142,11 @@ $def ret_result(resp):
 			</tr>
 		</table>
 		$if resp['status']:
-			
 			$:ret_result(resp['ret'])
 			$:pagination("/ret/search/", resp['page_info'])
-		
+		$else:
+			$:ret_result(resp['ret_'])
+			$:pagination("/ret/", resp['page_info_'])
 	</form>
 </div>
 
@@ -210,15 +223,44 @@ $def ret_result(resp):
             const score = this.getAttribute("data-score");
 
             // 填充模态框内容
+
+			document.getElementById("illegal_type").innerText = product['illegal_type'];
+            document.getElementById("illegal_basis").innerText = product['illegal_basis'];
+            document.getElementById("illegal_description").innerText = product['illegal_description'];
+			document.getElementById("illegal_keywords").innerText = product['illegal_keywords'];
+
+
             document.getElementById("modalProductRank").innerText = rank;
             document.getElementById("modalProductScore").innerText = score;
             document.getElementById("product_code").innerText = product['product_code'];
             document.getElementById("product_url").innerText = product['product_url'];
             document.getElementById("product_name").innerText = product['product_name'];
-            document.getElementById("product_images").innerText = product['product_images'];
+            // document.getElementById("product_images").innerText = product['product_images'];
+			
+						// 动态生成商品图片并绑定点击事件
+			const productImagesContainer = document.getElementById("product_images_container");
+			productImagesContainer.innerHTML = ""; // 清空之前的内容
+
+			// 假设 product['product_images'] 是一个逗号分隔的链接字符串
+			const imageLinks = product['product_images'].split(',');
+
+			imageLinks.forEach((link) => {
+				const img = document.createElement("img");
+				img.src = link.trim(); // 设置图片链接
+				img.style.width = "100px"; // 设置图片宽度
+				img.style.cursor = "pointer"; // 鼠标悬停时显示为手型
+				img.title = "点击查看大图"; // 提示文字
+
+				// 点击图片跳转到链接
+				img.addEventListener("click", () => {
+					window.open(link.trim(), "_blank"); // 在新窗口打开链接
+				});
+
+				productImagesContainer.appendChild(img); // 添加到容器中
+			});
+
+
             document.getElementById("product_price").innerText = product['product_price'];
-            // document.getElementById("product_intro").innerText = product['product_intro'];
-            // document.getElementById("product_spec").innerText = product['product_spec'];
             document.getElementById("timestamp").innerText = product['timestamp'];
        
 			
