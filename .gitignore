@@ -1,3 +1,5 @@
+./*.log
+./.vscode
 .static/ali_data
 .static/JD_data
 .static/msr_iamges
@@ -13,6 +15,3 @@ visiual_result
 ali_all_clip-B32_feat_concate.hdf5
 clip_cn_vit-b-16.pt
 __pycache__/
-*.log
-*.ipynb
-.vscode

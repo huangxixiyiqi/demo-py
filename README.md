@@ -83,27 +83,24 @@ demo
 ├── /ali_data_prepare/    # 数据预处理
 ├── /indexdir/            # whoosh索引
 ├── /templates/    				# html页面
+├── /config/              # 配置文件
+├── /run_sh/              # 运行脚本  
 ├── /static/              # 静态资源， css样式文件
 │  ├── /imgs/
 ├── .gitignore
 ├── client.py
-├── config.json
 ├── environment.yml
 ├── extract_all_pic_CLIP_feat.py
 └── extract_all_pic_cnCLIP_feat.py
-├── extract_feature.sh
 └── grouping.py
 ├── i2i.py
 └── i2t.py
 ├── init_model.py
-└── kill.sh
-main.py
-merge.py
-ret.py
-ret_whoosh.py
-server.py
-sftp-config.json
-start.sh
+├── main.py
+├── merge.py
+├── ret.py
+├── ret_whoosh.py
+├── server.py
 ```
 
 
@@ -112,7 +109,7 @@ start.sh
 
 ```shell
 conda activate demo
-sh start.sh
+sh ./run_sh/start.sh
 ```
 
 
