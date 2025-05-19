@@ -82,7 +82,7 @@ demo
 ├── README.md
 ├── /ali_data_prepare/    # 数据预处理
 ├── /indexdir/            # whoosh索引
-├── /templates/    				# html页面
+├── /templates/           # html页面
 ├── /config/              # 配置文件
 ├── /run_sh/              # 运行脚本  
 ├── /static/              # 静态资源， css样式文件
