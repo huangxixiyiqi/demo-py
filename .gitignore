@@ -1,4 +1,8 @@
-static
+.static/ali_data
+.static/JD_data
+.static/msr_iamges
+.static/msr_part_images
+.static/uploadedImage
 Chinese_CLIP
 CLIP
 faissIndex
@@ -11,3 +15,4 @@ clip_cn_vit-b-16.pt
 __pycache__/
 *.log
 *.ipynb
+.vscode

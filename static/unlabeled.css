@@ -1,0 +1,43 @@
+.grid-container {
+    display: grid;
+    justify-content: space-evenly;
+    grid-template-columns: 16% 16% 16% 16% 16% 16%;
+    grid-gap: 10px;
+    border-radius: 5px;
+    border: 1px #ccc solid;
+    background-color: #f2f2f2;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.grid-item {
+    border: 2px solid #ccc;
+    padding: 10px;
+    width: 100%;
+    margin: auto;
+    overflow: auto;
+}
+
+.pagination {
+    display: inline-block;
+}
+
+.pagination a {
+    color: black;
+    float: left;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    text-decoration: none;
+}
+
+.pagination a.active {
+    background-color: #4CAF50;
+    color: white;
+    border: 1px solid #4CAF50;
+    cursor: pointer;
+}
+
+.pagination a:hover:not(.active) {
+    background-color: #ddd;
+    cursor: pointer;
+}

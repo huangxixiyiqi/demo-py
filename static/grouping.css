@@ -1,0 +1,91 @@
+.searchbox {
+    margin-top: 10px;
+    border: 1px #ccc solid;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #f2f2f2;
+    overflow: auto;
+}
+
+.searchbox input[type=text], select {
+    width: 60%;
+    padding: 12px 20px;
+    margin: 4px 0;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.searchbox select {
+    width: 15%;
+    padding: 12px 20px;
+    margin: 8px 5px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.searchbox input[type=submit] {
+    width: 10%;
+    background-color: #4CAF50;
+    color: white;
+    padding: 14px 20px;
+    margin: 8px 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.searchbox input[type=submit]:hover {
+    background-color: #45a049;
+}
+
+.searchbox form{
+    display: inline;
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: 10% 10% 10% 10% 10% 10% 10% 10% 10% 10%;
+    justify-content: space-evenly;
+    grid-gap: 1px;
+    border-radius: 5px;
+    border: 1px #ccc solid;
+    background-color: #f2f2f2;
+    padding: 10px;
+}
+
+.grid-item {
+    border: 1px solid #ccc;
+    padding: 1px;
+    height: 100%;
+    width: 100%;
+    margin: auto;
+    overflow: auto;
+}
+
+.pagination {
+    display: inline-block;
+}
+
+.pagination a {
+    color: black;
+    float: left;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    text-decoration: none;
+}
+
+.pagination a.active {
+    background-color: #4CAF50;
+    color: white;
+    border: 1px solid #4CAF50;
+    cursor: pointer;
+}
+
+.pagination a:hover:not(.active) {
+    background-color: #ddd;
+    cursor: pointer;
+}

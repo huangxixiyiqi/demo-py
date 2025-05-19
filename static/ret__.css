@@ -1,0 +1,276 @@
+body {
+    background-color: #EEF3F9; /* 设置页面的背景颜色 */
+}
+
+.searchbox{
+    margin-top: 10px;
+    /* border: 1px #ccc solid; */
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #EEF3F9;
+    overflow: auto;
+    font-family: 'Microsoft YaHei', sans-serif; 
+}
+.statbox {
+
+    background-color: white;
+    /* overflow: auto; */
+    font-family: 'Microsoft YaHei', sans-serif; 
+    height: 40px;
+    line-height: 40px;
+    font-size: 16pt;
+    color: #7D87A5;
+    margin: 0 auto;
+}
+.statbox h3{
+    padding-left: 20px;
+}
+form{
+    display: inline;
+}
+
+.searchbox input[type=text] {
+    width: 460px;
+    height: 40px;
+    padding: 12px 20px;
+    margin: 4px 0;
+    display: inline-block;
+    border: 1px solid #AEAEAE;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 16pt;
+    /* font-weight: bold; */
+    color: #545F8C;
+}
+
+.searchbox input[type=text]::placeholder {
+    font-size: 16pt;
+    color: #AEAEAE;
+}
+
+.searchbox label {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #545F8C;
+}
+
+
+.searchbox select {
+    width: 15%;
+    padding: 12px 20px;
+    margin: 8px 5px;
+    display: inline-block;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+   
+}
+
+.searchbox input[type=submit] {
+    width: 100px;
+    height: 40px;
+    font-size: 16pt;
+    background-color: #0D2D84;
+    color: white;
+    /* padding: 14px 20px; */
+    margin: 8px 0;
+    border: none;
+    cursor: pointer;
+    box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.3); /* 添加外阴影 */
+    border-radius: 4px;
+}
+
+
+.searchbox input[type=submit]:hover {
+    background-color: #0D2D84;
+    border-radius: 4px;
+}
+
+img {
+    display: block;
+    margin: auto;
+}
+.result-container{
+    background-color: white;
+    color: #545F8C;
+    font-size: 16pt;
+}
+
+.grid-container {
+    display: grid;
+    justify-content: space-evenly;
+    grid-template-columns: 25% 25% 25% 25%;
+    grid-gap: 10px;
+    border-radius: 5px;
+    border: 1px #ccc solid;
+    background-color: #EEF3F9;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.grid-item {
+    /* border: 1px #ccc solid; */
+    background-color: #FFFFFF;
+    padding: 10px;
+    width: 100%;
+    height: 500px;
+    margin: auto;
+    overflow: auto;
+}
+.grid-item p{
+    font-size: 13pt;
+    color: #545F8C;
+}
+.pagination {
+    display: inline-block;
+    background-color: white;
+}
+
+.pagination a {
+    color: black;
+    float: left;
+    border: 1px solid #ddd;
+    padding: 8px 16px;
+    text-decoration: none;
+    font-size: 14pt;
+    
+}
+
+.pagination a.active {
+    background-color: #0099FF;
+    color: white;
+    /* border: 1px solid #4CAF50; */
+    cursor: pointer;
+}
+.pagination a.number {
+
+    color: black;
+    /* border: 1px solid #4CAF50; */
+    cursor: pointer;
+}
+.pagination a.arrow {
+
+    color: #c0c2c8;
+    /* border: 1px solid #4CAF50; */
+    cursor: pointer;
+}
+.pagination a:hover:not(.active) {
+    
+    cursor: pointer;
+    color: #0066f4;
+}
+
+.grid-item input[type=submit] {
+    width: 80%;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    margin: auto;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: block;
+}
+
+.grid-item input[type=submit]:hover {
+    background-color: #45a049;
+}
+
+
+ /* 模态框基础样式 */
+ .modal {
+    display: none; /* 默认隐藏 */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7); /* 透明图层，黑色，透明度70% */
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    /* padding: 20px; */
+    /* border: 1px solid #888; */
+    width: 50%; /* 弹窗宽度 */
+    background-color: #FFFFFF; /* 浮窗背景为白色 */
+    border-radius: 8px;
+}
+.modal-content h3 {
+    background-color: #203d8d;
+    font-size: 20pt;
+    height: 50px;
+    color: white;
+    padding-left: 20px;
+    line-height: 50px; /* 设置为和高度相同 */
+    border-top-left-radius: 8px;  /* 只设置上左角圆角 */
+    border-top-right-radius: 8px; /* 只设置上右角圆角 */
+}
+
+.modal-content p{
+    padding-left: 20px;
+    font-size: 16pt;
+    color: #545F8C;
+}
+.modal-content ul{
+    font-size: 16pt;
+    color: #545F8C;
+}
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover, .close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* 图片弹窗
+ */
+ /* 模态框样式 */
+ .modal_img {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    padding-top: 60px;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.7); /* 透明图层，黑色，透明度70% */
+}
+
+.modal-content_img {
+    margin: auto;
+    display: block;
+    width: 80%;
+    max-width: 700px;
+    background-color: #FFFFFF; /* 浮窗背景为白色 */
+
+}
+
+.close_img {
+    position: absolute;
+    top: 30px;
+    right: 35px;
+    color: #fff;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close_img:hover,
+.close_img:focus {
+    color: #bbb;
+    text-decoration: none;
+    cursor: pointer;
+}
